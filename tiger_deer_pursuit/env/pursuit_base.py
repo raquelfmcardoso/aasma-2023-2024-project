@@ -292,8 +292,8 @@ class Pursuit:
                     self.pixel_scale,
                 )
                 col = (0, 0, 0)
-                if self.model_state[0][x][y] == -1:
-                    col = (255, 255, 255)
+                #if self.model_state[0][x][y] == -1:
+                #    col = (255, 255, 255)
                 pygame.draw.rect(self.screen, col, pos)
 
     def draw_pursuers_observations(self):
@@ -399,7 +399,7 @@ class Pursuit:
                 self.screen = pygame.display.set_mode(
                     (self.pixel_scale * self.x_size, self.pixel_scale * self.y_size)
                 )
-                pygame.display.set_caption("Pursuit")
+                pygame.display.set_caption("Tiger Deer")
             else:
                 self.screen = pygame.Surface(
                     (self.pixel_scale * self.x_size, self.pixel_scale * self.y_size)
@@ -407,7 +407,7 @@ class Pursuit:
 
         self.draw_model_state()
 
-        self.draw_pursuers_observations()
+        #self.draw_pursuers_observations()
 
         self.draw_evaders()
         self.draw_pursuers()
