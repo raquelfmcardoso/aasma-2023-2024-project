@@ -83,8 +83,8 @@ import pygame
 from gymnasium.utils import EzPickle
 
 from pettingzoo import AECEnv
-from pettingzoo.sisl.pursuit.manual_policy import ManualPolicy
-from pettingzoo.sisl.pursuit.pursuit_base import Pursuit as _env
+from tiger_deer_pursuit.env.manual_policy import ManualPolicy
+from tiger_deer_pursuit.env.pursuit_base import Pursuit as _env
 from pettingzoo.utils import AgentSelector, wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 

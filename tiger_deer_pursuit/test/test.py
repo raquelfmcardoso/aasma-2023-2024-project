@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/raquel/aasma/tiger_deer_pursuit')  # Add the path to the 'tiger_deer_pursuit' package
+sys.path.append('/home/raquel/aasma/aasma-2023-2024-project/')  # Add the path to the 'tiger_deer_pursuit' package
 from tiger_deer_pursuit import tiger_deer_pursuit_v0
 
 env = tiger_deer_pursuit_v0.env(render_mode="human")
