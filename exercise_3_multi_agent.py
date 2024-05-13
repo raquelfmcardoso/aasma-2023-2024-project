@@ -12,7 +12,7 @@ from exercise_1_single_random_agent import RandomPrey
 from exercise_2_single_random_vs_greedy import GreedyAgent
 
 
-def run_multi_agent(environment: Env, agents: Sequence[Agent], n_episodes: int) -> np.ndarray:
+def run_multi_agent(environment: Env, agents: Sequence[Agent], preys: Sequence[Agent], n_episodes: int) -> np.ndarray:
 
     results = np.zeros(n_episodes)
 
@@ -24,10 +24,12 @@ def run_multi_agent(environment: Env, agents: Sequence[Agent], n_episodes: int) 
 
         while not all(terminals):
             steps += 1
-            for observations, agent in zip(observations, agents):
+            for observations, agent, prey in zip(observations, agents, preys):
                 agent.see(observations)
-            actions = [agent.action() for agent in agents]
-            next_observations, rewards, terminals, info = environment.step(actions)
+                prey.see(observations)
+            agent_actions = [agent.action() for agent in agents]
+            prey_actions = [prey.action() for prey in preys]
+            next_observations, rewards, terminals, info = environment.step(agent_actions, prey_actions)
             observations = next_observations
         results[episode] = steps
 
@@ -47,17 +49,34 @@ if __name__ == '__main__':
     environment = SimplifiedPredatorPrey(grid_shape=(7, 7), n_agents=4, n_preys=1, max_steps=100)
 
     # 2 - Setup the teams
-    teams = {
+    agent_teams = {
 
         "Random Team": [
             RandomAgent(environment.agent_action_space[0].n),
             RandomAgent(environment.agent_action_space[1].n),
             RandomAgent(environment.agent_action_space[2].n),
             RandomAgent(environment.agent_action_space[3].n),
-            RandomPrey(environment.prey_action_space[4].n)
         ],
+    }
+    
+    prey_teams = {
+        
+        "Random Prey": [
+            RandomPrey(environment.prey_action_space[0].n)
+        ],
+    }
 
-        "Greedy Team": [
+    # 3 - Evaluate teams
+    results = {}
+    result = run_multi_agent(environment, agent_teams["Random Team"], prey_teams["Random Prey"], opt.episodes)
+    results["Random"] = result
+    
+    print(f"Random Team: {result.mean()} +/- {result.std()}")
+    #compare_results(results, title="Multi-Agent on 'Predator Prey' Environment", colors=["orange", "green"])
+
+
+'''
+"Greedy Team": [
             GreedyAgent(agent_id=0, n_agents=4),
             GreedyAgent(agent_id=1, n_agents=4),
             GreedyAgent(agent_id=2, n_agents=4),
@@ -70,18 +89,4 @@ if __name__ == '__main__':
             RandomAgent(environment.action_space[2].n),
             RandomAgent(environment.action_space[3].n)
         ]
-    }
-
-    # 3 - Evaluate teams
-    results = {}
-    for team, agents in teams.items():
-        result = run_multi_agent(environment, agents, opt.episodes)
-        results[team] = result
-
-    # 4 - Compare results
-    compare_results(
-        results,
-        title="Teams Comparison on 'Predator Prey' Environment",
-        colors=["orange", "green", "blue"]
-    )
-
+'''
