@@ -23,9 +23,10 @@ if __name__ == '__main__':
 
     # 1 - Setup the environment
     environment = SimplifiedPredatorPrey(
-        grid_shape=(17, 15),
-        n_agents=4, n_preys=1,
-        max_steps=100, required_captors=1
+        grid_shape=(30, 30),
+        n_agents=10, n_preys=4, n_preys2=4,
+        max_steps=100, required_captors=1,
+        n_obstacles=20
     )
 
     # Run
@@ -40,9 +41,26 @@ if __name__ == '__main__':
         agents = [RandomAgent(environment.agent_action_space[0].n),
                   RandomAgent(environment.agent_action_space[1].n),
                   RandomAgent(environment.agent_action_space[2].n),
-                  RandomAgent(environment.agent_action_space[3].n)]
+                  RandomAgent(environment.agent_action_space[3].n),
+                  RandomAgent(environment.agent_action_space[4].n),
+                  RandomAgent(environment.agent_action_space[5].n),
+                  RandomAgent(environment.agent_action_space[6].n),
+                  RandomAgent(environment.agent_action_space[7].n),
+                  RandomAgent(environment.agent_action_space[8].n),
+                  RandomAgent(environment.agent_action_space[9].n)
+                  ]
         
-        preys = [RandomPrey(environment.prey_action_space[0].n)]
+        preys = [RandomPrey(environment.prey_action_space[0].n),
+                 RandomPrey(environment.prey_action_space[1].n),
+                 RandomPrey(environment.prey_action_space[2].n),
+                 RandomPrey(environment.prey_action_space[3].n)
+                 ]
+
+        preys2 = [RandomPrey(environment.prey2_action_space[0].n), 
+                  RandomPrey(environment.prey2_action_space[1].n),
+                  RandomPrey(environment.prey2_action_space[2].n),
+                  RandomPrey(environment.prey2_action_space[3].n)
+                  ]
 
         environment.render()
         time.sleep(opt.render_sleep_time)
@@ -51,12 +69,14 @@ if __name__ == '__main__':
         while not all(terminals):
             
             n_steps += 1
-            for observations, agent, prey in zip(observations, agents, preys):
+            for observations, agent, prey, prey2 in zip(observations, agents, preys, preys2):
                 agent.see(observations)
                 prey.see(observations)
+                prey2.see(observations)
             agent_actions = [agent.action() for agent in agents]
             prey_actions = [prey.action() for prey in preys]
-            next_observations, rewards, terminals, info = environment.step(agent_actions, prey_actions)
+            prey2_actions = [prey2.action() for prey2 in preys2]
+            next_observations, rewards, terminals, info = environment.step(agent_actions, prey_actions, prey2_actions)
 
             print(f"Timestep {n_steps}")
             print(f"\tObservation: {observations}")
@@ -64,6 +84,8 @@ if __name__ == '__main__':
                 print(f"\tAgent Action: {action}\n")
             for action in prey_actions:
                 print(f"\tPrey Action: {action}\n")
+            for action in prey2_actions:
+                print(f"\tPrey2 Action: {action}\n")
             environment.render()
             time.sleep(opt.render_sleep_time)
 
