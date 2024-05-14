@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # 1 - Setup the environment
     environment = SimplifiedPredatorPrey(
         grid_shape=(30, 30),
-        n_agents=10, n_preys=4, n_preys2=4,
+        n_agents=4, n_preys=4, n_preys2=4,
         max_steps=100, required_captors=1,
         n_obstacles=20
     )
@@ -40,16 +40,10 @@ if __name__ == '__main__':
 
         observations = environment.reset()
 
-        agents = [GreedyAgent(agent_id=0, n_agents=10),
-                  GreedyAgent(agent_id=1, n_agents=10),
-                  GreedyAgent(agent_id=2, n_agents=10),
-                  GreedyAgent(agent_id=3, n_agents=10),
-                  GreedyAgent(agent_id=4, n_agents=10),
-                  GreedyAgent(agent_id=5, n_agents=10),
-                  GreedyAgent(agent_id=6, n_agents=10),
-                  GreedyAgent(agent_id=7, n_agents=10),
-                  GreedyAgent(agent_id=8, n_agents=10),
-                  GreedyAgent(agent_id=9, n_agents=10)
+        agents = [GreedyAgent(agent_id=0, n_agents=4),
+                  GreedyAgent(agent_id=1, n_agents=4),
+                  GreedyAgent(agent_id=2, n_agents=4),
+                  GreedyAgent(agent_id=3, n_agents=4),
                   ]
         # agents = [RandomAgent(environment.prey_action_space[0].n),
         #          RandomAgent(environment.prey_action_space[1].n),
