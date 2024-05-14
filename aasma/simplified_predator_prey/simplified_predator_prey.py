@@ -138,10 +138,6 @@ class SimplifiedPredatorPrey(gym.Env):
         self._step_count += 1
         rewards = [self._step_cost for _ in range(self.n_agents)]
 
-        for agent_i, action in enumerate(agents_action):
-            if not (self._agent_dones[agent_i]):
-                self.__update_agent_pos(agent_i, action)
-
         for prey_i, action in enumerate(preys_action):
             if self._prey_alive[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey_pos[prey_i])
@@ -165,6 +161,10 @@ class SimplifiedPredatorPrey(gym.Env):
                         rewards[agent_i] += _reward
                 
                 self.__update_prey2_pos(prey_i, action)
+
+        for agent_i, action in enumerate(agents_action):
+            if not (self._agent_dones[agent_i]):
+                self.__update_agent_pos(agent_i, action)
                 
         if (self._step_count >= self._max_steps) or (True not in self._prey_alive) or (True not in self._prey_alive2):
             for i in range(self.n_agents):
@@ -499,6 +499,8 @@ class SimplifiedPredatorPrey(gym.Env):
                 if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
                     fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
             fill_cell(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+        
+        for agent_i in range(self.n_agents):
             draw_circle(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_COLOR)
             write_cell_text(img, text=str(agent_i + 1), pos=self.agent_pos[agent_i], cell_size=CELL_SIZE,
                             fill='white', margin=0.4)

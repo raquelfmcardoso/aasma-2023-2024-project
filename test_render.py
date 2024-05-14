@@ -8,6 +8,8 @@ from aasma.simplified_predator_prey import SimplifiedPredatorPrey
 from exercise_1_single_random_agent import RandomAgent
 from exercise_1_single_random_agent import RandomPrey
 
+from exercise_2_single_random_vs_greedy import GreedyAgent
+
 if __name__ == '__main__':
 
     """
@@ -38,17 +40,28 @@ if __name__ == '__main__':
 
         observations = environment.reset()
 
-        agents = [RandomAgent(environment.agent_action_space[0].n),
-                  RandomAgent(environment.agent_action_space[1].n),
-                  RandomAgent(environment.agent_action_space[2].n),
-                  RandomAgent(environment.agent_action_space[3].n),
-                  RandomAgent(environment.agent_action_space[4].n),
-                  RandomAgent(environment.agent_action_space[5].n),
-                  RandomAgent(environment.agent_action_space[6].n),
-                  RandomAgent(environment.agent_action_space[7].n),
-                  RandomAgent(environment.agent_action_space[8].n),
-                  RandomAgent(environment.agent_action_space[9].n)
+        agents = [GreedyAgent(agent_id=0, n_agents=10),
+                  GreedyAgent(agent_id=1, n_agents=10),
+                  GreedyAgent(agent_id=2, n_agents=10),
+                  GreedyAgent(agent_id=3, n_agents=10),
+                  GreedyAgent(agent_id=4, n_agents=10),
+                  GreedyAgent(agent_id=5, n_agents=10),
+                  GreedyAgent(agent_id=6, n_agents=10),
+                  GreedyAgent(agent_id=7, n_agents=10),
+                  GreedyAgent(agent_id=8, n_agents=10),
+                  GreedyAgent(agent_id=9, n_agents=10)
                   ]
+        # agents = [RandomAgent(environment.prey_action_space[0].n),
+        #          RandomAgent(environment.prey_action_space[1].n),
+        #          RandomAgent(environment.prey_action_space[2].n),
+        #          RandomAgent(environment.prey_action_space[3].n),
+        #          RandomAgent(environment.prey_action_space[4].n),
+        #          RandomAgent(environment.prey_action_space[5].n),
+        #          RandomAgent(environment.prey_action_space[6].n),
+        #          RandomAgent(environment.prey_action_space[7].n),
+        #          RandomAgent(environment.prey_action_space[8].n),
+        #          RandomAgent(environment.prey_action_space[9].n)
+        #          ]
         
         preys = [RandomPrey(environment.prey_action_space[0].n),
                  RandomPrey(environment.prey_action_space[1].n),
@@ -66,6 +79,7 @@ if __name__ == '__main__':
         time.sleep(opt.render_sleep_time)
 
         terminals = [False for _ in range(len(agents))]
+        print("Obs:", observations)
         while not all(terminals):
             
             n_steps += 1
