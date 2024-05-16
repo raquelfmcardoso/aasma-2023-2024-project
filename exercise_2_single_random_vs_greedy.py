@@ -126,6 +126,7 @@ class GreedyPrey(Agent):
         distances = np.array(agent_position) - np.array(prey_position)
         print(f"PREY: Distance between agent {agent_position} and prey {prey_position}: {distances}")
         abs_distances = np.absolute(distances)
+        # TODO: Test swapping closing call, remember to call the other function in the else branch of the _close_x function
         if abs_distances[0] > abs_distances[1]:
             return self._close_vertically(distances)
         elif abs_distances[0] < abs_distances[1]:

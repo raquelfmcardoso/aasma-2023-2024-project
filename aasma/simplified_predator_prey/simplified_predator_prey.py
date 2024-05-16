@@ -34,7 +34,6 @@ class SimplifiedPredatorPrey(gym.Env):
         self.n_agents = n_agents
         self.n_preys = n_preys
         self.n_preys2 = n_preys2
-        self.n_preys2 = n_preys2
         self._max_steps = max_steps
         self._step_count = None
         self._penalty = penalty
@@ -43,27 +42,21 @@ class SimplifiedPredatorPrey(gym.Env):
         self._view_mask = (5, 5) # para both prey e predator
         self._required_captors = required_captors
         self._n_obstacles = n_obstacles
-        self._n_obstacles = n_obstacles
 
         self.action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
         self.agent_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
         self.prey_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_preys)])
         self.prey2_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_preys2)])
-        self.prey2_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_preys2)])
         self.agent_pos = {_: None for _ in range(self.n_agents)}
         self.prey_pos = {_: None for _ in range(self.n_preys)}
         self.prey2_pos = {_: None for _ in range(self.n_preys2)}
-        self.prey2_pos = {_: None for _ in range(self.n_preys2)}
         self._prey_alive = None
-        self._prey_alive2 = None
         self._prey_alive2 = None
 
         self._base_grid = self.__create_grid()  # with no agents
         self._full_obs = copy.copy(self._base_grid)
-        self._full_obs = copy.copy(self._base_grid)
         self._agent_dones = [False for _ in range(self.n_agents)]
         self._prey_move_probs = prey_move_probs
-        self._prey2_move_probs = prey_move_probs
         self._prey2_move_probs = prey_move_probs
         self.viewer = None
         self.full_observable = full_observable
@@ -80,24 +73,6 @@ class SimplifiedPredatorPrey(gym.Env):
 
         self._total_episode_reward = None
         self.seed()
-
-    def deepcopy(self, grid):
-        new_grid = []
-        for row in grid:
-            new_row = []
-            for y in row:
-                new_row.append(y)
-            new_grid.append(new_row)
-        return new_grid
-
-    def deepcopy(self, grid):
-        new_grid = []
-        for row in grid:
-            new_row = []
-            for y in row:
-                new_row.append(y)
-            new_grid.append(new_row)
-        return new_grid
 
     def simplified_features(self):
 
@@ -261,57 +236,6 @@ class SimplifiedPredatorPrey(gym.Env):
                 direction = random.choice(['horizontal', 'vertical'])
                 length = random.randint(2, 3)
                 self.place_straight_line(x, y, direction, length, grid)
-    
-    def prey2_action_space_sample(self):
-        return [prey2_action_space.sample() for prey2_action_space in self.prey2_action_space]
-    
-    def place_l_wall(self, x, y, orientation, grid):
-        if (self.is_valid((x, y))):
-                grid[x][y] = PRE_IDS['wall']
-        if orientation == 'up':
-            if (self.is_valid((x, y + 1))):
-                grid[x][y + 1] = PRE_IDS['wall']
-            if (self.is_valid((x + 1, y))):
-                grid[x + 1][y] = PRE_IDS['wall']
-        elif orientation == 'down':
-            if (self.is_valid((x, y - 1))):
-                grid[x][y - 1] = PRE_IDS['wall']
-            if (self.is_valid((x, y + 1))):
-                grid[x][y + 1] = PRE_IDS['wall']
-        elif orientation == 'left':
-            if (self.is_valid((x - 1, y))):
-                grid[x - 1][y] = PRE_IDS['wall']
-            if (self.is_valid((x, y - 1))):
-                grid[x][y - 1] = PRE_IDS['wall']
-        elif orientation == 'right':
-            if (self.is_valid((x + 1, y))):
-                grid[x + 1][y] = PRE_IDS['wall']
-            if (self.is_valid((x, y + 1))):
-                grid[x][y + 1] = PRE_IDS['wall']
-
-    def place_straight_line(self, x, y, direction, length, grid):
-        if direction == 'horizontal':
-            for i in range(length):
-                if (self.is_valid((x, y + i))):
-                    grid[x][y + i] = PRE_IDS['wall']
-        elif direction == 'vertical':
-            for i in range(length):
-                if (self.is_valid((x + i, y))):
-                    grid[x + i][y] = PRE_IDS['wall']
-
-    def generate_walls(self, grid, n_obstacles=10):
-        for _ in range(n_obstacles):
-            obstacle_type = random.choice(['L', 'line'])
-            x = random.randint(0, self._grid_shape[0] - 1)
-            y = random.randint(0, self._grid_shape[1] - 1)
-
-            if obstacle_type == 'L':
-                orientation = random.choice(['up', 'down', 'left', 'right'])
-                self.place_l_wall(x, y, orientation, grid)
-            elif obstacle_type == 'line':
-                direction = random.choice(['horizontal', 'vertical'])
-                length = random.randint(2, 3)
-                self.place_straight_line(x, y, direction, length, grid)
 
     def __draw_base_img(self):
         self._base_img = draw_grid(self._grid_shape[0], self._grid_shape[1], cell_size=CELL_SIZE, fill='white')
@@ -319,14 +243,8 @@ class SimplifiedPredatorPrey(gym.Env):
             for y in range(self._grid_shape[1]):
                 if self._full_obs[x][y] == PRE_IDS['wall']:
                     fill_cell(self._base_img, [x, y], cell_size=CELL_SIZE, fill=WALL_COLOR, margin=0.1)
-        for x in range(self._grid_shape[0]):
-            for y in range(self._grid_shape[1]):
-                if self._full_obs[x][y] == PRE_IDS['wall']:
-                    fill_cell(self._base_img, [x, y], cell_size=CELL_SIZE, fill=WALL_COLOR, margin=0.1)
 
     def __create_grid(self):
-        _grid = [[PRE_IDS['empty'] for y in range(self._grid_shape[1])] for x in range(self._grid_shape[0])]
-        self.generate_walls(_grid, n_obstacles = self._n_obstacles)
         _grid = [[PRE_IDS['empty'] for y in range(self._grid_shape[1])] for x in range(self._grid_shape[0])]
         self.generate_walls(_grid, n_obstacles = self._n_obstacles)
         return _grid
@@ -361,15 +279,6 @@ class SimplifiedPredatorPrey(gym.Env):
                     break
             self.__update_prey2_view(prey_i)
 
-        for prey_i in range(self.n_preys2):
-            while True:
-                pos = [self.np_random.randint(0, self._grid_shape[0] - 1),
-                       self.np_random.randint(0, self._grid_shape[1] - 1)]
-                if self._is_cell_vacant(pos) and (self._neighbour_agents(pos)[0] == 0):
-                    self.prey2_pos[prey_i] = pos
-                    break
-            self.__update_prey2_view(prey_i)
-
         self.__draw_base_img()
 
     def get_agent_obs(self):
@@ -385,6 +294,7 @@ class SimplifiedPredatorPrey(gym.Env):
             for row in range(max(0, pos[0] - 10), min(pos[0] + 10 + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - 10), min(pos[1] + 10 + 1, self._grid_shape[1])):
                     if (PRE_IDS['prey'] or PRE_IDS['prey2']) in self._full_obs[row][col]:
+                        print(f"Agent found prey in ({row, col})")
                         # Horizontal verification
                         if (row == pos[0] and col > pos[1] and PRE_IDS['wall'] in self._full_obs[row][(pos[1] + 1):(col + 1)]):
                             print("Horizontal wall found on the right of " , agent_i)
