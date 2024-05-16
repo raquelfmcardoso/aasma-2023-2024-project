@@ -65,6 +65,7 @@ if __name__ == '__main__':
         time.sleep(opt.render_sleep_time)
 
         terminals = [False for _ in range(len(agents))]
+        print("Obs:", observations)
         while not all(terminals):
             
             print("Obs:", observations)
@@ -81,6 +82,8 @@ if __name__ == '__main__':
             prey_actions = [prey.action() for prey in preys]
             prey2_actions = [prey2.action() for prey2 in preys2]
             next_observations, rewards, terminals, info = environment.step(agent_actions, prey_actions, prey2_actions)
+            prey2_actions = [prey2.action() for prey2 in preys2]
+            next_observations, rewards, terminals, info = environment.step(agent_actions, prey_actions, prey2_actions)
 
             print(f"Timestep {n_steps}")
             print(f"\t Agent Observations: {observations[0]}")
@@ -90,6 +93,8 @@ if __name__ == '__main__':
                 print(f"\tAgent Action: {action}\n")
             for action in prey_actions:
                 print(f"\tPrey Action: {action}\n")
+            for action in prey2_actions:
+                print(f"\tPrey2 Action: {action}\n")
             for action in prey2_actions:
                 print(f"\tPrey2 Action: {action}\n")
             environment.render()
