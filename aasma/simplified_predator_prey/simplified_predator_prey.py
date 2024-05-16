@@ -27,9 +27,7 @@ class SimplifiedPredatorPrey(gym.Env):
     """
 
     metadata = {'render.modes': ['human', 'rgb_array']}
-
-    def __init__(self, grid_shape=(5, 5), n_agents=2, n_preys=1, n_preys2=1, prey_move_probs=(0.175, 0.175, 0.175, 0.175, 0.3),
-                 full_observable=False, penalty=-0.5, step_cost=-0.01, prey_capture_reward=5, max_steps=100, required_captors=2, n_obstacles=10):
+    
     def __init__(self, grid_shape=(5, 5), n_agents=2, n_preys=1, n_preys2=1, prey_move_probs=(0.175, 0.175, 0.175, 0.175, 0.3),
                  full_observable=False, penalty=-0.5, step_cost=-0.01, prey_capture_reward=5, max_steps=100, required_captors=2, n_obstacles=10):
         self._grid_shape = grid_shape
@@ -156,7 +154,6 @@ class SimplifiedPredatorPrey(gym.Env):
         return [self.get_agent_obs(), self.get_prey_obs(), self.get_prey2_obs()]
 
     def step(self, agents_action, preys_action, preys2_action):
-    def step(self, agents_action, preys_action, preys2_action):
         self._step_count += 1
         rewards = [self._step_cost for _ in range(self.n_agents)]
 
@@ -171,24 +168,6 @@ class SimplifiedPredatorPrey(gym.Env):
                         rewards[agent_i] += _reward
                 
                 self.__update_prey_pos(prey_i, action)
-
-        for prey_i, action in enumerate(preys2_action):
-            if self._prey_alive2[prey_i]:
-                predator_neighbour_count, n_i = self._neighbour_agents(self.prey2_pos[prey_i])
-                if predator_neighbour_count >= self._required_captors:
-                    _reward = self._prey_capture_reward
-                    self._prey_alive2[prey_i] = (predator_neighbour_count < self._required_captors)
-
-                    for agent_i in range(self.n_agents):
-                        rewards[agent_i] += _reward
-                
-                self.__update_prey2_pos(prey_i, action)
-
-        for agent_i, action in enumerate(agents_action):
-            if not (self._agent_dones[agent_i]):
-                self.__update_agent_pos(agent_i, action)
-                
-        if (self._step_count >= self._max_steps) or (True not in self._prey_alive) or (True not in self._prey_alive2):
 
         for prey_i, action in enumerate(preys2_action):
             if self._prey_alive2[prey_i]:
