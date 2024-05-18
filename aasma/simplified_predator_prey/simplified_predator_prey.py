@@ -29,7 +29,7 @@ class SimplifiedPredatorPrey(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
     
     def __init__(self, grid_shape=(5, 5), n_agents=2, n_preys=1, n_preys2=1, prey_move_probs=(0.175, 0.175, 0.175, 0.175, 0.3),
-                 full_observable=False, penalty=-0.5, step_cost=-0.01, prey_capture_reward=5, max_steps=100, required_captors=2, n_obstacles=10):
+                 full_observable=False, penalty=-0.5, step_cost=-0.01, prey_capture_reward=5, max_steps=100, required_captors=2, n_obstacles=10, vision_range=3):
         self._grid_shape = grid_shape
         self.n_agents = n_agents
         self.n_preys = n_preys
@@ -42,6 +42,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self._view_mask = (5, 5) # para both prey e predator
         self._required_captors = required_captors
         self._n_obstacles = n_obstacles
+        self._vision_range = vision_range
 
         self.action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
         self.agent_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
@@ -291,8 +292,8 @@ class SimplifiedPredatorPrey(gym.Env):
 
             # check if prey is in the view area
             #_prey_pos = np.zeros(self._view_mask)  # prey location in neighbour
-            for row in range(max(0, pos[0] - 10), min(pos[0] + 10 + 1, self._grid_shape[0])):
-                for col in range(max(0, pos[1] - 10), min(pos[1] + 10 + 1, self._grid_shape[1])):
+            for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
                     if (PRE_IDS['prey'] or PRE_IDS['prey2']) in self._full_obs[row][col]:
                         print(f"Agent found prey in ({row, col})")
                         # Horizontal verification
@@ -349,8 +350,8 @@ class SimplifiedPredatorPrey(gym.Env):
 
             # check if agent is in the view area
             #_agent_pos = np.zeros(self._view_mask)  # agent location in neighbour
-            for row in range(max(0, pos[0] - 10), min(pos[0] + 10 + 1, self._grid_shape[0])):
-                for col in range(max(0, pos[1] - 10), min(pos[1] + 10 + 1, self._grid_shape[1])):
+            for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
                     if PRE_IDS['agent'] in self._full_obs[row][col]:
                         # Horizontal verification
                         if (row == pos[0] and col > pos[1] and PRE_IDS['wall'] in self._full_obs[row][(pos[1] + 1):(col + 1)]):
@@ -405,8 +406,8 @@ class SimplifiedPredatorPrey(gym.Env):
             _prey_i_pos.append(pos)
 
             #_agent_pos = np.zeros(self._view_mask)
-            for row in range(max(0, pos[0] - 10), min(pos[0] + 10 + 1, self._grid_shape[0])):
-                for col in range(max(0, pos[1] - 10), min(pos[1] + 10 + 1, self._grid_shape[1])):
+            for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
                     if PRE_IDS['agent'] in self._full_obs[row][col]:
                         # Horizontal verification
                         if (row == pos[0] and col > pos[1] and PRE_IDS['wall'] in self._full_obs[row][(pos[1] + 1):(col + 1)]):
