@@ -53,6 +53,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self.prey2_pos = {_: None for _ in range(self.n_preys2)}
         self._prey_alive = None
         self._prey_alive2 = None
+        self._hp_status = np.array([2 for _ in range(self.n_agents)])
 
         self._base_grid = self.__create_grid()  # with no agents
         self._full_obs = copy.copy(self._base_grid)
@@ -122,6 +123,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self._prey_alive = [True for _ in range(self.n_preys)]
         self._prey_alive2 = [True for _ in range(self.n_preys2)]
         self._prey_alive2 = [True for _ in range(self.n_preys2)]
+        self._hp_status = [2 for _ in range(self.n_agents)] # 2 is the max hp
 
         #self.get_agent_obs()
         #self.get_prey_obs()
@@ -139,7 +141,9 @@ class SimplifiedPredatorPrey(gym.Env):
                 if predator_neighbour_count >= self._required_captors:
                     _reward = self._prey_capture_reward
                     self._prey_alive[prey_i] = (predator_neighbour_count < self._required_captors)
-
+                    for i in n_i:
+                        self._hp_status[i] += 1.1 
+                    
                     for agent_i in range(self.n_agents):
                         rewards[agent_i] += _reward
                 
@@ -151,6 +155,8 @@ class SimplifiedPredatorPrey(gym.Env):
                 if predator_neighbour_count >= self._required_captors:
                     _reward = self._prey_capture_reward
                     self._prey_alive2[prey_i] = (predator_neighbour_count < self._required_captors)
+                    for i in n_i:
+                        self._hp_status[i] += 1.1
 
                     for agent_i in range(self.n_agents):
                         rewards[agent_i] += _reward
@@ -160,7 +166,15 @@ class SimplifiedPredatorPrey(gym.Env):
         for agent_i, action in enumerate(agents_action):
             if not (self._agent_dones[agent_i]):
                 self.__update_agent_pos(agent_i, action)
-                
+                self._hp_status[agent_i] -= 0.1
+        
+        for agent_i in range(self.n_agents):
+            if self._hp_status[agent_i] <= 0:
+                self._hp_status[agent_i] = 0
+                self._agent_dones[agent_i] = True
+            if self._hp_status[agent_i] > 2:
+                self._hp_status[agent_i] = 2
+              
         if (self._step_count >= self._max_steps) or (True not in self._prey_alive) or (True not in self._prey_alive2):
             for i in range(self.n_agents):
                 self._agent_dones[i] = True
@@ -168,6 +182,7 @@ class SimplifiedPredatorPrey(gym.Env):
         for i in range(self.n_agents):
             self._total_episode_reward[i] += rewards[i]
 
+        print(f"Health {self._hp_status}")
         #self.get_agent_obs()
         #self.get_prey_obs()
         #self.get_prey2_obs()
@@ -474,6 +489,8 @@ class SimplifiedPredatorPrey(gym.Env):
     def __update_agent_pos(self, agent_i, move):
 
         curr_pos = copy.copy(self.agent_pos[agent_i])
+        if self._agent_dones[agent_i]:
+            return # if agent is done, don't do anything
         next_pos = None
         if move == 0:  # down
             next_pos = [curr_pos[0] + 1, curr_pos[1]]
@@ -630,18 +647,20 @@ class SimplifiedPredatorPrey(gym.Env):
 
 
         for agent_i in range(self.n_agents):
-            for neighbour in self.__get_neighbour_coordinates(self.agent_pos[agent_i]):
-                if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
-                    fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
-                if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
-                    fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
-            fill_cell(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+            if self._agent_dones[agent_i] is False:
+                for neighbour in self.__get_neighbour_coordinates(self.agent_pos[agent_i]):
+                    if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
+                        fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+                    if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
+                        fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+                fill_cell(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
         
         
         for agent_i in range(self.n_agents):
-            draw_circle(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_COLOR)
-            write_cell_text(img, text=str(agent_i + 1), pos=self.agent_pos[agent_i], cell_size=CELL_SIZE,
-                            fill='white', margin=0.4)
+            if self._agent_dones[agent_i] is False:
+                draw_circle(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_COLOR)
+                write_cell_text(img, text=str(agent_i + 1), pos=self.agent_pos[agent_i], cell_size=CELL_SIZE,
+                                fill='white', margin=0.4)
 
         for prey_i in range(self.n_preys):
             if self._prey_alive[prey_i]:
