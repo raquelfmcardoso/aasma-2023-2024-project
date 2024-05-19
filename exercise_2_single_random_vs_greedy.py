@@ -50,7 +50,7 @@ class GreedyAgent(Agent):
 
         for agent_observation in self.observation:
             if (agent_observation[0][0] not in agent_id_absolute_obs):
-                agent_id_relative_obs[agent_observation[0][1]] = len(self.observation[agent_observation[0][0]][2])
+                agent_id_relative_obs[tuple(agent_observation[0][1])] = len(self.observation[agent_observation[0][0]][2])
 
         moves = {
                  DOWN: move if (move := self._apply_move([agent_position[0], agent_position[1]], DOWN)) not in wall_positions else None,
@@ -195,7 +195,7 @@ class GreedyPrey(Agent):
 
         for prey_observation in self.observation:
             if (prey_observation[0][0] not in prey_id_absolute_obs):
-                prey_id_relative_obs[prey_observation[0][1]] = len(self.observation[prey_observation[0][0]][2])
+                prey_id_relative_obs[tuple(prey_observation[0][1])] = len(self.observation[prey_observation[0][0]][2])
 
         moves = {
                  DOWN: move if (move := self._apply_move([prey_position[0], prey_position[1]], DOWN)) not in wall_positions else None,
