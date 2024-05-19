@@ -17,7 +17,8 @@ class BdiAgent(Agent):
         self.role = role
         self.beliefs = {}
         self.desires = {}
-        self.intentions = []
+        self.intentions = {}
+        self.cooperating = False
 
     def perceive(self, environment):
         # Update agent's beliefs based on the current environment
@@ -56,51 +57,64 @@ class BdiAgent(Agent):
                 agents.sort(key=lambda x: x[1])
                 for agent in agents:
                     if agent[0] >= 2:
-                        self.desires['closest_prey'] = agent[2]
+                        self.desires['desired_location'] = agent[2]
                         break
-                if 'closest_prey' not in self.desires:
+                if 'desired_location' not in self.desires:
                     for agent in agents:
                         if agent[0] == 1:
-                            self.desires['closest_prey'] = agent[2]
+                            self.desires['desired_location'] = agent[2]
                             break
-                if 'closest_prey' not in self.desires:
+                if 'desired_location' not in self.desires:
                     #Move randomly
                     pass
             else: 
                 #Move randomly
                 pass
 
-        if len(self.beliefs['prey_positions']) > 0:
-            #find the desired agent to cooperate
-            closest_agent = self.closest_agent(self.beliefs['agent_position'], self.beliefs['agent_positions'])
-            self.desires['cooperative_agent'] = self.beliefs['absolute_obs'][closest_agent[0]] # closest agent's observations
+        if not self.cooperating:
+            if len(self.beliefs['prey_positions']) > 0:
+                #find the desired agent to cooperate
+                closest_agent = self.closest_agent(self.beliefs['agent_position'], self.beliefs['agent_positions'])
+                self.desires['cooperative_agent'] = self.beliefs['absolute_obs'][closest_agent[0]] # closest agent's observations
 
-            closest_prey = self.closest_prey(self.beliefs['agent_position'], self.beliefs['prey_positions'])
-            self.desires['closest_prey'] = closest_prey # closest prey's position
-        else:
-            if len(self.beliefs['absolute_obs']) > 1:
-                # order the agents by distance (first agent is the closest) and choose the closest agent with at least 2 preys
-                agents = []
-                for agent in self.beliefs['absolute_obs']: # agent is agent_id 
-                    agents.append((agent, cityblock(self.beliefs['agent_position'], self.beliefs['absolute_obs'][agent][0][1])))
-                agents.sort(key=lambda x: x[1])
-                for agent in agents:
-                    if len(self.beliefs['absolute_obs'][agent[0]][2]) >= 2:
-                        self.desires['closest_prey'] = self.beliefs['absolute_obs'][agent[0]][0][1]
-                        break
-                if 'closest_prey' not in self.desires:
-                    for agent in agents:
-                        if len(self.beliefs['absolute_obs'][agent[0]][2]) == 1:
-                            self.desires['closest_prey'] = self.beliefs['absolute_obs'][agent[0]][0][1]
-                            break
-                if 'closest_prey' not in self.desires:
-                    get_closest_agent_relative()  
+                closest_prey = self.closest_prey(self.beliefs['agent_position'], self.beliefs['prey_positions'])
+                self.desires['closest_prey'] = closest_prey # closest prey's position
             else:
-                get_closest_agent_relative()
+                if len(self.beliefs['absolute_obs']) > 1:
+                    # order the agents by distance (first agent is the closest) and choose the closest agent with at least 2 preys
+                    agents = []
+                    for agent in self.beliefs['absolute_obs']: # agent is agent_id 
+                        agents.append((agent, cityblock(self.beliefs['agent_position'], self.beliefs['absolute_obs'][agent][0][1])))
+                    agents.sort(key=lambda x: x[1])
+                    for agent in agents:
+                        if len(self.beliefs['absolute_obs'][agent[0]][2]) >= 2:
+                            self.desires['desired_location'] = self.beliefs['absolute_obs'][agent[0]][0][1]
+                            break
+                    if 'desired_location' not in self.desires:
+                        for agent in agents:
+                            if len(self.beliefs['absolute_obs'][agent[0]][2]) == 1:
+                                self.desires['desired_location'] = self.beliefs['absolute_obs'][agent[0]][0][1]
+                                break
+                    if 'desired_location' not in self.desires:
+                        get_closest_agent_relative()  
+                else:
+                    get_closest_agent_relative()
+        else:
+            pass
+            # ver oq fazer nos beliefs qd se tá a cooperar
 
     def deliberation(self):
         # Select intentions based on agent's desires and beliefs
-        pass
+        if not self.cooperating:
+            if 'desired_location' in self.desires:
+                self.intentions['move'] = self.desires['desired_location']
+                # vou fazer a action nisto
+            elif 'cooperative_agent' in self.desires:
+                self.intentions['cooperate'] = self.desires['cooperative_agent']
+            elif 'closest_prey' in self.desires:
+                self.intentions['hunt'] = self.desires['closest_prey']
+        else:
+            pass
 
     def action(self):
         # Execute the selected intentions
