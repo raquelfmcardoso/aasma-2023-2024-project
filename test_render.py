@@ -66,8 +66,7 @@ if __name__ == '__main__':
 
         terminals = [False for _ in range(len(agents))]
         while not all(terminals):
-            
-            print("Obs:", observations)
+
             n_steps += 1
             for agent in agents:
                 agent.see(observations[0])
@@ -75,8 +74,7 @@ if __name__ == '__main__':
                 prey.see(observations[1])
             for prey2 in preys2:
                 prey2.see(observations[2])
-            time.sleep(10)
-            
+
             agent_actions = [agent.action() for agent in agents]
             prey_actions = [prey.action() for prey in preys]
             prey2_actions = [prey2.action() for prey2 in preys2]

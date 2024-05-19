@@ -53,6 +53,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self.prey2_pos = {_: None for _ in range(self.n_preys2)}
         self._prey_alive = None
         self._prey_alive2 = None
+        self._hp_status = np.array([2 for _ in range(self.n_agents)])
 
         self._base_grid = self.__create_grid()  # with no agents
         self._full_obs = copy.copy(self._base_grid)
@@ -122,6 +123,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self._prey_alive = [True for _ in range(self.n_preys)]
         self._prey_alive2 = [True for _ in range(self.n_preys2)]
         self._prey_alive2 = [True for _ in range(self.n_preys2)]
+        self._hp_status = [2 for _ in range(self.n_agents)] # 2 is the max hp
 
         #self.get_agent_obs()
         #self.get_prey_obs()
@@ -140,6 +142,9 @@ class SimplifiedPredatorPrey(gym.Env):
                     _reward = self._prey_capture_reward
                     self._prey_alive[prey_i] = (predator_neighbour_count < self._required_captors)
 
+                    for i in n_i:
+                        self._hp_status[i] += 1.1
+
                     for agent_i in range(self.n_agents):
                         rewards[agent_i] += _reward
                 
@@ -152,6 +157,9 @@ class SimplifiedPredatorPrey(gym.Env):
                     _reward = self._prey_capture_reward
                     self._prey_alive2[prey_i] = (predator_neighbour_count < self._required_captors)
 
+                    for i in n_i:
+                        self._hp_status[i] += 1.1 
+
                     for agent_i in range(self.n_agents):
                         rewards[agent_i] += _reward
                 
@@ -160,6 +168,15 @@ class SimplifiedPredatorPrey(gym.Env):
         for agent_i, action in enumerate(agents_action):
             if not (self._agent_dones[agent_i]):
                 self.__update_agent_pos(agent_i, action)
+
+                self._hp_status[agent_i] -= 0.1
+        
+            for agent_i in range(self.n_agents):
+                if self._hp_status[agent_i] <= 0:
+                    self._hp_status[agent_i] = 0
+                    self._agent_dones[agent_i] = True
+                if self._hp_status[agent_i] > 2:
+                    self._hp_status[agent_i] = 2
                 
         if (self._step_count >= self._max_steps) or (True not in self._prey_alive) or (True not in self._prey_alive2):
             for i in range(self.n_agents):
@@ -246,12 +263,12 @@ class SimplifiedPredatorPrey(gym.Env):
                     fill_cell(self._base_img, [x, y], cell_size=CELL_SIZE, fill=WALL_COLOR, margin=0.1)
 
     def __create_grid(self):
-        _grid = [[PRE_IDS['empty'] for y in range(self._grid_shape[1])] for x in range(self._grid_shape[0])]
+        _grid = [[PRE_IDS['empty'] for _ in range(self._grid_shape[1])] for _ in range(self._grid_shape[0])]
         self.generate_walls(_grid, n_obstacles = self._n_obstacles)
         return _grid
 
     def __init_full_obs(self):
-        self._full_obs = self.__create_grid()
+        self._full_obs = copy.copy(self._base_grid)
 
         for agent_i in range(self.n_agents):
             while True:
@@ -282,58 +299,89 @@ class SimplifiedPredatorPrey(gym.Env):
 
         self.__draw_base_img()
 
+    def move_horizontally(self, distances, position):
+        if distances[1] > 0:
+            position[1] += 1
+        elif distances[1] < 0:
+            position[1] -= 1
+
+    def move_vertically(self, distances, position):
+        if distances[0] > 0:
+            position[0] += 1
+        elif distances[0] < 0:
+            position[0] -= 1
+
+    def wall_in_path(self, initial_pos, goal_pos):
+        position = [initial_pos[0], initial_pos[1]]
+        wall = PRE_IDS['wall'] in self._full_obs[position[0]][position[1]]
+
+        while position != goal_pos and not wall:
+            distances = [goal_pos[0] - position[0], goal_pos[1] - position[1]]
+            abs_distances = [abs(distances[0]), abs(distances[1])]
+
+            if abs_distances[0] > abs_distances[1]:
+                self.move_vertically(distances=distances, position=position)
+            elif abs_distances[0] < abs_distances[1]:
+                self.move_horizontally(distances=distances, position=position)
+            else:
+                roll = random.uniform(0, 1)
+                self.move_horizontally(distances, position) if roll > 0.5 else self.move_vertically(distances, position)
+            
+            try:
+                if position == goal_pos:
+                    # Mandatory check for when the entity at goal_pos is a wall.
+                    return False
+                wall = PRE_IDS['wall'] in self._full_obs[position[0]][position[1]]
+            except IndexError:
+                return False
+
+        return wall
+
     def get_agent_obs(self):
         _obs = []
         for agent_i in range(self.n_agents):
             pos = self.agent_pos[agent_i]
+            _agent_i_obs = [[agent_i, pos]]
+            _agent_i_agent_obs = []
+            _agent_i_prey_obs = []
+            _agent_i_wall_obs = []
             #_agent_i_obs = [pos[0] / (self._grid_shape[0] - 1), pos[1] / (self._grid_shape[1] - 1)]  # coordinates
-            _agent_i_pos = []
-            _agent_i_pos.append(pos)
 
-            # check if prey is in the view area
-            #_prey_pos = np.zeros(self._view_mask)  # prey location in neighbour
             for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
-                    if (PRE_IDS['prey'] or PRE_IDS['prey2']) in self._full_obs[row][col]:
-                        print(f"Agent found prey in ({row, col})")
-                        # Horizontal verification
-                        if (row == pos[0] and col > pos[1] and PRE_IDS['wall'] in self._full_obs[row][(pos[1] + 1):(col + 1)]):
-                            print("Horizontal wall found on the right of " , agent_i)
-                            break
-                        elif (row == pos[0] and col < pos[1] and PRE_IDS['wall'] in self._full_obs[row][col:pos[1]]):
-                            print("Horizontal wall found on the left of " , agent_i)
-                            continue
-                        # Vertical verification
-                        elif (col == pos[1] and row > pos[0] and any(x == PRE_IDS['wall'] for i in range(pos[0] + 1, row) for x in self._full_obs[i][col])):
-                            print("Vertical wall found below " , agent_i)
-                            continue
-                        elif (col == pos[1] and row < pos[0] and any(x == PRE_IDS['wall'] for i in range(row, pos[0]) for x in self._full_obs[i][col])):
-                            print("Vertical wall found above " , agent_i)
-                            continue
-                        # Diagonal verification
-                        if abs(row - pos[0]) == abs(col - pos[1]):
-                            if (row - pos[0] > 0):
-                                print("Prey is below the agent")
-                                if (col - pos[0] > 0 and self.verify_diagonal((-1, -1), pos, [row, col])):
-                                    print("Diagonal wall found on the bottom right of " , agent_i)
-                                    continue
-                                elif (col - pos[0] < 0 and self.verify_diagonal((-1, 1), pos, [row, col])):
-                                    print("Diagonal wall found on the bottom left of " , agent_i)
-                                    continue
-                            elif (row - pos[0] < 0):
-                                print("Prey is above the agent")
-                                if (col - pos[0] > 0 and self.verify_diagonal((1, -1), pos, [row, col])):
-                                    print("Diagonal wall found on the top right of " , agent_i)
-                                    continue
-                                elif (col - pos[0] < 0 and self.verify_diagonal((1, 1), pos, [row, col])):
-                                    print("Diagonal wall found on the top left of " , agent_i)
-                                    continue
-                        #_prey_pos[row - (pos[0] - 2), col - (pos[1] - 2)] = 1  # get relative position for the prey loc.
-                        _agent_i_pos.append([row, col])
+                    if (PRE_IDS['prey'] in self._full_obs[row][col] or PRE_IDS['prey2'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                        # Only append if no wall was detected on the shortest path
+                        _agent_i_prey_obs.append([row, col])
+                    elif (PRE_IDS['wall'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                        _agent_i_wall_obs.append([row, col])
+                    elif (PRE_IDS['agent'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
+                        # Only append if no wall was detected and if the agent is not ourselves
+                        _agent_i_agent_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
 
-            #_agent_i_obs += _prey_pos.flatten().tolist()  # adding prey pos in observable area
-            #_agent_i_obs += [self._step_count / self._max_steps]  # adding time
-            _obs.append(_agent_i_pos)
+            # Add grid's borders as walls                    
+            if (pos[0] - self._vision_range < 0):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+                    if (not self.wall_in_path(pos, [-1, col])):
+                        _agent_i_wall_obs.append([-1, col])
+            elif (pos[0] + self._vision_range > self._grid_shape[0]):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+                    if (not self.wall_in_path(pos, [self._grid_shape[0], col])):
+                        _agent_i_wall_obs.append([self._grid_shape[0], col])
+
+            if (pos[1] - self._vision_range < 0):
+                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                    if (not self.wall_in_path(pos, [row, -1])):
+                        _agent_i_wall_obs.append([row, -1])
+            elif (pos[1] + self._vision_range > self._grid_shape[1]):
+                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                    if (not self.wall_in_path(pos, [row, self._grid_shape[1]])):
+                        _agent_i_wall_obs.append([row, self._grid_shape[1]])
+
+            _agent_i_obs.append(_agent_i_agent_obs)
+            _agent_i_obs.append(_agent_i_prey_obs)
+            _agent_i_obs.append(_agent_i_wall_obs)
+            
+            _obs.append(_agent_i_obs)
 
         if self.full_observable:
             _obs = np.array(_obs).flatten().tolist()
@@ -344,53 +392,47 @@ class SimplifiedPredatorPrey(gym.Env):
         _obs = []
         for prey_i in range(self.n_preys):
             pos = self.prey_pos[prey_i]
-            #_prey_i_obs = [pos[0] / (self._grid_shape[0] - 1), pos[1] / (self._grid_shape[1] - 1)]  # coordinates
-            _prey_i_pos = []
-            _prey_i_pos.append(pos)
+            _prey_i_obs = [[prey_i, pos]]
+            _prey_i_agent_obs = []
+            _prey_i_prey_obs = []
+            _prey_i_wall_obs = []
+            #_agent_i_obs = [pos[0] / (self._grid_shape[0] - 1), pos[1] / (self._grid_shape[1] - 1)]  # coordinates
 
-            # check if agent is in the view area
-            #_agent_pos = np.zeros(self._view_mask)  # agent location in neighbour
             for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
-                    if PRE_IDS['agent'] in self._full_obs[row][col]:
-                        # Horizontal verification
-                        if (row == pos[0] and col > pos[1] and PRE_IDS['wall'] in self._full_obs[row][(pos[1] + 1):(col + 1)]):
-                            print("Horizontal wall found on the right of " , prey_i)
-                            break
-                        elif (row == pos[0] and col < pos[1] and PRE_IDS['wall'] in self._full_obs[row][col:pos[1]]):
-                            print("Horizontal wall found on the left of " , prey_i)
-                            continue
-                        # Vertical verification
-                        elif (col == pos[1] and row > pos[0] and any(x == PRE_IDS['wall'] for i in range(pos[0] + 1, row) for x in self._full_obs[i][col])):
-                            print("Vertical wall found below " , prey_i)
-                            continue
-                        elif (col == pos[1] and row < pos[0] and any(x == PRE_IDS['wall'] for i in range(row, pos[0]) for x in self._full_obs[i][col])):
-                            print("Vertical wall found above " , prey_i)
-                            continue
-                        # Diagonal verification
-                        if abs(row - pos[0]) == abs(col - pos[1]):
-                            if (row - pos[0] > 0):
-                                print("Agent is below the prey")
-                                if (col - pos[0] > 0 and self.verify_diagonal((-1, -1), pos, [row, col])):
-                                    print("Diagonal wall found on the bottom right of " , prey_i)
-                                    continue
-                                elif (col - pos[0] < 0 and self.verify_diagonal((-1, 1), pos, [row, col])):
-                                    print("Diagonal wall found on the bottom left of " , prey_i)
-                                    continue
-                            elif (row - pos[0] < 0):
-                                print("Agent is above the prey")
-                                if (col - pos[0] > 0 and self.verify_diagonal((1, -1), pos, [row, col])):
-                                    print("Diagonal wall found on the top right of " , prey_i)
-                                    continue
-                                elif (col - pos[0] < 0 and self.verify_diagonal((1, 1), pos, [row, col])):
-                                    print("Diagonal wall found on the top left " , prey_i)
-                                    continue
-                        #_agent_pos[row - (pos[0] - 2), col - (pos[1] - 2)] = 1  # get relative position for the prey loc.
-                        _prey_i_pos.append([row, col])
+                    if (PRE_IDS['prey'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
+                        # Only append if no wall was detected and the prey is not ourselves
+                        _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
+                    elif (PRE_IDS['wall'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                        _prey_i_wall_obs.append([row, col])
+                    elif (PRE_IDS['agent'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                        # Only append if no wall was detected
+                        _prey_i_agent_obs.append([row, col])
 
-            #_prey_i_obs += _agent_pos.flatten().tolist()  # adding agent pos in observable area
-            #_prey_i_obs += [self._step_count / self._max_steps]  # adding time
-            _obs.append(_prey_i_pos)
+            # Add grid's borders as walls                    
+            if (pos[0] - self._vision_range < 0):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+                    if (not self.wall_in_path(pos, [-1, col])):
+                        _prey_i_wall_obs.append([-1, col])
+            elif (pos[0] + self._vision_range > self._grid_shape[0]):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+                    if (not self.wall_in_path(pos, [self._grid_shape[0], col])):
+                        _prey_i_wall_obs.append([self._grid_shape[0], col])
+
+            if (pos[1] - self._vision_range < 0):
+                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                    if (not self.wall_in_path(pos, [row, -1])):
+                        _prey_i_wall_obs.append([row, -1])
+            elif (pos[1] + self._vision_range > self._grid_shape[1]):
+                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                    if (not self.wall_in_path(pos, [row, self._grid_shape[1]])):
+                        _prey_i_wall_obs.append([row, self._grid_shape[1]])
+
+            _prey_i_obs.append(_prey_i_agent_obs)
+            _prey_i_obs.append(_prey_i_prey_obs)
+            _prey_i_obs.append(_prey_i_wall_obs)
+                        
+            _obs.append(_prey_i_obs)
 
         if self.full_observable:
             _obs = np.array(_obs).flatten().tolist()
@@ -401,51 +443,47 @@ class SimplifiedPredatorPrey(gym.Env):
         _obs = []
         for prey_i in range(self.n_preys2):
             pos = self.prey2_pos[prey_i]
-            #_prey_i_obs = [pos[0] / (self._grid_shape[0] - 1), pos[1] / (self._grid_shape[1] - 1)]
-            _prey_i_pos = []
-            _prey_i_pos.append(pos)
+            _prey_i_obs = [[prey_i, pos]]
+            _prey_i_agent_obs = []
+            _prey_i_prey_obs = []
+            _prey_i_wall_obs = []
+            #_agent_i_obs = [pos[0] / (self._grid_shape[0] - 1), pos[1] / (self._grid_shape[1] - 1)]  # coordinates
 
-            #_agent_pos = np.zeros(self._view_mask)
             for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
-                    if PRE_IDS['agent'] in self._full_obs[row][col]:
-                        # Horizontal verification
-                        if (row == pos[0] and col > pos[1] and PRE_IDS['wall'] in self._full_obs[row][(pos[1] + 1):(col + 1)]):
-                            print("Horizontal wall found on the right of " , prey_i)
-                            break
-                        elif (row == pos[0] and col < pos[1] and PRE_IDS['wall'] in self._full_obs[row][col:pos[1]]):
-                            print("Horizontal wall found on the left of " , prey_i)
-                            continue
-                        # Vertical verification
-                        elif (col == pos[1] and row > pos[0] and any(x == PRE_IDS['wall'] for i in range(pos[0] + 1, row) for x in self._full_obs[i][col])):
-                            print("Vertical wall found below " , prey_i)
-                            continue
-                        elif (col == pos[1] and row < pos[0] and any(x == PRE_IDS['wall'] for i in range(row, pos[0]) for x in self._full_obs[i][col])):
-                            print("Vertical wall found above " , prey_i)
-                            continue
-                        # Diagonal verification
-                        if abs(row - pos[0]) == abs(col - pos[1]):
-                            if (row - pos[0] > 0):
-                                print("Agent is below the prey")
-                                if (col - pos[0] > 0 and self.verify_diagonal((-1, -1), pos, [row, col])):
-                                    print("Diagonal wall found on the bottom right of " , prey_i)
-                                    continue
-                                elif (col - pos[0] < 0 and self.verify_diagonal((-1, 1), pos, [row, col])):
-                                    print("Diagonal wall found on the bottom left of " , prey_i)
-                                    continue
-                            elif (row - pos[0] < 0):
-                                print("Agent is above the prey")
-                                if (col - pos[0] > 0 and self.verify_diagonal((1, -1), pos, [row, col])):
-                                    print("Diagonal wall found on the top right of " , prey_i)
-                                    continue
-                                elif (col - pos[0] < 0 and self.verify_diagonal((1, 1), pos, [row, col])):
-                                    print("Diagonal wall found on the top left " , prey_i)
-                                    continue
-                        _prey_i_pos.append([row, col])
+                    if (PRE_IDS['prey2'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
+                        # Only append if no wall was detected and the prey is not ourselves
+                        _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
+                    elif (PRE_IDS['wall'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                        _prey_i_wall_obs.append([row, col])
+                    elif (PRE_IDS['agent'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                        # Only append if no wall was detected
+                        _prey_i_agent_obs.append([row, col])
 
-            #_prey_i_obs += _agent_pos.flatten().tolist()
-            #_prey_i_obs += [self._step_count / self._max_steps]
-            _obs.append(_prey_i_pos)
+            # Add grid's borders as walls                    
+            if (pos[0] - self._vision_range < 0):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+                    if (not self.wall_in_path(pos, [-1, col])):
+                        _prey_i_wall_obs.append([-1, col])
+            elif (pos[0] + self._vision_range > self._grid_shape[0]):
+                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+                    if (not self.wall_in_path(pos, [self._grid_shape[0], col])):
+                        _prey_i_wall_obs.append([self._grid_shape[0], col])
+
+            if (pos[1] - self._vision_range < 0):
+                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                    if (not self.wall_in_path(pos, [row, -1])):
+                        _prey_i_wall_obs.append([row, -1])
+            elif (pos[1] + self._vision_range > self._grid_shape[1]):
+                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+                    if (not self.wall_in_path(pos, [row, self._grid_shape[1]])):
+                        _prey_i_wall_obs.append([row, self._grid_shape[1]])
+
+            _prey_i_obs.append(_prey_i_agent_obs)
+            _prey_i_obs.append(_prey_i_prey_obs)
+            _prey_i_obs.append(_prey_i_wall_obs)
+                        
+            _obs.append(_prey_i_obs)
         
         if self.full_observable:
             _obs = np.array(_obs).flatten().tolist()
@@ -555,28 +593,6 @@ class SimplifiedPredatorPrey(gym.Env):
                 self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
                 self.__update_prey2_view(prey_i)
 
-    def __update_prey2_pos(self, prey_i, move):
-        curr_pos = copy.copy(self.prey2_pos[prey_i])
-        if self._prey_alive2[prey_i]:
-            next_pos = None
-            if move == 0:
-                next_pos = [curr_pos[0] + 1, curr_pos[1]]
-            elif move == 1:
-                next_pos = [curr_pos[0], curr_pos[1] - 1]
-            elif move == 2:
-                next_pos = [curr_pos[0] - 1, curr_pos[1]]
-            elif move == 3:
-                next_pos = [curr_pos[0], curr_pos[1] + 1]
-            elif move == 4:
-                pass
-            else:
-                raise Exception('Action Not found!')
-            
-            if next_pos is not None and self._is_cell_vacant(next_pos):
-                self.prey2_pos[prey_i] = next_pos
-                self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
-                self.__update_prey2_view(prey_i)
-
     def __update_agent_view(self, agent_i):
         self._full_obs[self.agent_pos[agent_i][0]][self.agent_pos[agent_i][1]] = PRE_IDS['agent'] + str(agent_i + 1)
 
@@ -584,12 +600,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self._full_obs[self.prey_pos[prey_i][0]][self.prey_pos[prey_i][1]] = PRE_IDS['prey'] + str(prey_i + 1)
 
     def __update_prey2_view(self, prey_i):
-        self._full_obs[self.prey2_pos[prey_i][0]][self.prey2_pos[prey_i][1]] = PRE_IDS['prey'] + str(prey_i + 1)
-
-
-    def __update_prey2_view(self, prey_i):
-        self._full_obs[self.prey2_pos[prey_i][0]][self.prey2_pos[prey_i][1]] = PRE_IDS['prey'] + str(prey_i + 1)
-
+        self._full_obs[self.prey2_pos[prey_i][0]][self.prey2_pos[prey_i][1]] = PRE_IDS['prey2'] + str(prey_i + 1)
 
     def _neighbour_agents(self, pos):
         # check if agent is in neighbour
@@ -628,31 +639,26 @@ class SimplifiedPredatorPrey(gym.Env):
     def render(self, mode='human'):
         img = copy.copy(self._base_img)
 
-
         for agent_i in range(self.n_agents):
-            for neighbour in self.__get_neighbour_coordinates(self.agent_pos[agent_i]):
-                if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
-                    fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
-                if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
-                    fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
-            fill_cell(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+            if self._agent_dones[agent_i] is False:
+                for neighbour in self.__get_neighbour_coordinates(self.agent_pos[agent_i]):
+                    if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
+                        fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+                    if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
+                        fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
+                fill_cell(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
         
         
         for agent_i in range(self.n_agents):
-            draw_circle(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_COLOR)
-            write_cell_text(img, text=str(agent_i + 1), pos=self.agent_pos[agent_i], cell_size=CELL_SIZE,
-                            fill='white', margin=0.4)
+            if self._agent_dones[agent_i] is False:
+                draw_circle(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_COLOR)
+                write_cell_text(img, text=str(agent_i + 1), pos=self.agent_pos[agent_i], cell_size=CELL_SIZE,
+                                fill='white', margin=0.4)
 
         for prey_i in range(self.n_preys):
             if self._prey_alive[prey_i]:
                 draw_circle(img, self.prey_pos[prey_i], cell_size=CELL_SIZE, fill=PREY_COLOR)
                 write_cell_text(img, text=str(prey_i + 1), pos=self.prey_pos[prey_i], cell_size=CELL_SIZE,
-                                fill='white', margin=0.4)
-
-        for prey_i in range(self.n_preys2):
-            if self._prey_alive2[prey_i]:
-                draw_circle(img, self.prey2_pos[prey_i], cell_size=CELL_SIZE, fill=PREY2_COLOR)
-                write_cell_text(img, text=str(prey_i + 1), pos=self.prey2_pos[prey_i], cell_size=CELL_SIZE,
                                 fill='white', margin=0.4)
 
         for prey_i in range(self.n_preys2):
@@ -702,7 +708,7 @@ ACTION_MEANING = {
 PRE_IDS = {
     'agent': 'A',
     'prey': 'P',
-    'prey2': 'P2',
+    'prey2': 'R',
     'wall': 'W',
     'empty': '0'
 }
