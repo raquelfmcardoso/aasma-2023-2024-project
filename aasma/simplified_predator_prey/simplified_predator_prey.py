@@ -140,8 +140,7 @@ class SimplifiedPredatorPrey(gym.Env):
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey_pos[prey_i])
                 if predator_neighbour_count >= self._required_captors:
                     _reward = self._prey_capture_reward
-                    self._prey_alive[prey_i] = (predator_neighbour_count < self._required_captors)
-
+                    self._prey_alive[prey_i] = (predator_neighbour_count < self._required_captors)                    
                     for i in n_i:
                         self._hp_status[i] += 1.1
 
@@ -171,13 +170,13 @@ class SimplifiedPredatorPrey(gym.Env):
 
                 self._hp_status[agent_i] -= 0.1
         
-            for agent_i in range(self.n_agents):
-                if self._hp_status[agent_i] <= 0:
-                    self._hp_status[agent_i] = 0
-                    self._agent_dones[agent_i] = True
-                if self._hp_status[agent_i] > 2:
-                    self._hp_status[agent_i] = 2
-                
+        for agent_i in range(self.n_agents):
+            if self._hp_status[agent_i] <= 0:
+                self._hp_status[agent_i] = 0
+                self._agent_dones[agent_i] = True
+            if self._hp_status[agent_i] > 2:
+                self._hp_status[agent_i] = 2
+              
         if (self._step_count >= self._max_steps) or (True not in self._prey_alive) or (True not in self._prey_alive2):
             for i in range(self.n_agents):
                 self._agent_dones[i] = True
@@ -185,6 +184,7 @@ class SimplifiedPredatorPrey(gym.Env):
         for i in range(self.n_agents):
             self._total_episode_reward[i] += rewards[i]
 
+        print(f"Health {self._hp_status}")
         #self.get_agent_obs()
         #self.get_prey_obs()
         #self.get_prey2_obs()
@@ -512,6 +512,8 @@ class SimplifiedPredatorPrey(gym.Env):
     def __update_agent_pos(self, agent_i, move):
 
         curr_pos = copy.copy(self.agent_pos[agent_i])
+        if self._agent_dones[agent_i]:
+            return # if agent is done, don't do anything
         next_pos = None
         if move == 0:  # down
             next_pos = [curr_pos[0] + 1, curr_pos[1]]
