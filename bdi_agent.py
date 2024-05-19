@@ -49,20 +49,24 @@ class BdiAgent(Agent):
     def update_desires(self):
         # Update agent's desires based on its beliefs
         def get_closest_agent_relative():
-            agents = []
-            for agent_pos, num_preys in self.beliefs['relative_obs'].items():
-                agents.append(num_preys, cityblock(self.beliefs['agent_position'], agent_pos))
-            agents.sort(key=lambda x: x[1])
-            for agent in agents:
-                if agent[0] >= 2:
-                    self.desires['closest_prey'] = agent[2]
-                    break
-            if 'closest_prey' not in self.desires:
+            if len(self.beliefs['relative_obs']) > 0:
+                agents = []
+                for agent_pos, num_preys in self.beliefs['relative_obs'].items():
+                    agents.append(num_preys, cityblock(self.beliefs['agent_position'], agent_pos))
+                agents.sort(key=lambda x: x[1])
                 for agent in agents:
-                    if agent[0] == 1:
+                    if agent[0] >= 2:
                         self.desires['closest_prey'] = agent[2]
                         break
-            if 'closest_prey' not in self.desires:
+                if 'closest_prey' not in self.desires:
+                    for agent in agents:
+                        if agent[0] == 1:
+                            self.desires['closest_prey'] = agent[2]
+                            break
+                if 'closest_prey' not in self.desires:
+                    #Move randomly
+                    pass
+            else: 
                 #Move randomly
                 pass
 
