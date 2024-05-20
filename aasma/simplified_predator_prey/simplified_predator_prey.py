@@ -56,7 +56,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self._hp_status = np.array([2 for _ in range(self.n_agents)])
 
         self._base_grid = self.__create_grid()  # with no agents
-        self._full_obs = copy.copy(self._base_grid)
+        self._full_obs = self.deepcopy(self._base_grid)
         self._agent_dones = [False for _ in range(self.n_agents)]
         self._prey_move_probs = prey_move_probs
         self._prey2_move_probs = prey_move_probs
@@ -75,6 +75,15 @@ class SimplifiedPredatorPrey(gym.Env):
 
         self._total_episode_reward = None
         self.seed()
+
+    def deepcopy(self, grid):
+        new_grid = []
+        for row in grid:
+            new_row = []
+            for y in row:
+                new_row.append(y)
+            new_grid.append(new_row)
+        return new_grid
 
     def simplified_features(self):
 
@@ -266,7 +275,7 @@ class SimplifiedPredatorPrey(gym.Env):
         return _grid
 
     def __init_full_obs(self):
-        self._full_obs = copy.copy(self._base_grid)
+        self._full_obs = self.deepcopy(self._base_grid)
 
         for agent_i in range(self.n_agents):
             while True:
