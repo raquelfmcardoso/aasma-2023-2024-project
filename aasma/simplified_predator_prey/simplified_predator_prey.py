@@ -148,9 +148,17 @@ class SimplifiedPredatorPrey(gym.Env):
         for prey_i, action in enumerate(preys_action):
             if self._prey_alive[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey_pos[prey_i])
-                if predator_neighbour_count >= self._required_captors:
+                wall_count = 0
+                curr_pos = copy.copy(self.prey_pos[prey_i])
+                prey_neighbours = [[curr_pos[0] + 1, curr_pos[1]], [curr_pos[0] - 1, curr_pos[1]],
+                                   [curr_pos[0], curr_pos[1] + 1], [curr_pos[0], curr_pos[1] -1]]
+                for pos in prey_neighbours:
+                    if pos[0] < 0 or pos[1] < 0 or pos[0] >= self._grid_shape[0] or pos[1] >= self._grid_shape[1] or\
+                        self._full_obs[pos[0]][pos[1]] == PRE_IDS['wall'] :
+                        wall_count += 1
+                if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):
                     _reward = self._prey_capture_reward
-                    self._prey_alive[prey_i] = (predator_neighbour_count < self._required_captors)                    
+                    self._prey_alive[prey_i] = False
                     for i in n_i:
                         self._hp_status[i] += 1.1
 
@@ -162,9 +170,17 @@ class SimplifiedPredatorPrey(gym.Env):
         for prey_i, action in enumerate(preys2_action):
             if self._prey_alive2[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey2_pos[prey_i])
-                if predator_neighbour_count >= self._required_captors:
+                wall_count = 0
+                curr_pos = copy.copy(self.prey2_pos[prey_i])
+                prey_neighbours = [[curr_pos[0] + 1, curr_pos[1]], [curr_pos[0] - 1, curr_pos[1]],
+                                   [curr_pos[0], curr_pos[1] + 1], [curr_pos[0], curr_pos[1] -1]]
+                for pos in prey_neighbours:
+                    if pos[0] < 0 or pos[1] < 0 or pos[0] >= self._grid_shape[0] or pos[1] >= self._grid_shape[1] or\
+                        self._full_obs[pos[0]][pos[1]] == PRE_IDS['wall'] :
+                        wall_count += 1
+                if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):    
                     _reward = self._prey_capture_reward
-                    self._prey_alive2[prey_i] = (predator_neighbour_count < self._required_captors)
+                    self._prey_alive2[prey_i] = False
 
                     for i in n_i:
                         self._hp_status[i] += 1.1 
@@ -177,13 +193,15 @@ class SimplifiedPredatorPrey(gym.Env):
         for agent_i, action in enumerate(agents_action):
             if not (self._agent_dones[agent_i]):
                 self.__update_agent_pos(agent_i, action)
-
                 self._hp_status[agent_i] -= 0.1
         
         for agent_i in range(self.n_agents):
             if self._hp_status[agent_i] <= 0:
                 self._hp_status[agent_i] = 0
                 self._agent_dones[agent_i] = True
+                # killing the agent
+                curr_pos = copy.copy(self.agent_pos[agent_i])
+                self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
             if self._hp_status[agent_i] > 2:
                 self._hp_status[agent_i] = 2
               
@@ -350,6 +368,9 @@ class SimplifiedPredatorPrey(gym.Env):
     def get_agent_obs(self):
         _obs = []
         for agent_i in range(self.n_agents):
+            if self._agent_dones[agent_i]:
+                _obs.append([])
+                continue
             pos = self.agent_pos[agent_i]
             _agent_i_obs = [[agent_i, pos]]
             _agent_i_agent_obs = []
@@ -401,6 +422,9 @@ class SimplifiedPredatorPrey(gym.Env):
     def get_prey_obs(self):
         _obs = []
         for prey_i in range(self.n_preys):
+            if not self._prey_alive[prey_i]:
+                _obs.append([])
+                continue
             pos = self.prey_pos[prey_i]
             _prey_i_obs = [[prey_i, pos]]
             _prey_i_agent_obs = []
@@ -452,6 +476,9 @@ class SimplifiedPredatorPrey(gym.Env):
     def get_prey2_obs(self):
         _obs = []
         for prey_i in range(self.n_preys2):
+            if not self._prey_alive2[prey_i]:
+                _obs.append([])
+                continue
             pos = self.prey2_pos[prey_i]
             _prey_i_obs = [[prey_i, pos]]
             _prey_i_agent_obs = []
@@ -522,26 +549,31 @@ class SimplifiedPredatorPrey(gym.Env):
     def __update_agent_pos(self, agent_i, move):
 
         curr_pos = copy.copy(self.agent_pos[agent_i])
-        if self._agent_dones[agent_i]:
-            return # if agent is done, don't do anything
-        next_pos = None
-        if move == 0:  # down
-            next_pos = [curr_pos[0] + 1, curr_pos[1]]
-        elif move == 1:  # left
-            next_pos = [curr_pos[0], curr_pos[1] - 1]
-        elif move == 2:  # up
-            next_pos = [curr_pos[0] - 1, curr_pos[1]]
-        elif move == 3:  # right
-            next_pos = [curr_pos[0], curr_pos[1] + 1]
-        elif move == 4:  # no-op
-            pass
-        else:
-            raise Exception('Action Not found!')
+        if self._agent_dones[agent_i] is False:
+            next_pos = None
+            if move == 0:  # down
+                next_pos = [curr_pos[0] + 1, curr_pos[1]]
+            elif move == 1:  # left
+                next_pos = [curr_pos[0], curr_pos[1] - 1]
+            elif move == 2:  # up
+                next_pos = [curr_pos[0] - 1, curr_pos[1]]
+            elif move == 3:  # right
+                next_pos = [curr_pos[0], curr_pos[1] + 1]
+            elif move == 4:  # no-op
+                pass
+            else:
+                raise Exception('Action Not found!')
 
-        if next_pos is not None and self._is_cell_vacant(next_pos):
-            self.agent_pos[agent_i] = next_pos
+            if next_pos is not None and self._is_cell_vacant(next_pos):
+                self.agent_pos[agent_i] = next_pos
+                self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
+                self.__update_agent_view(agent_i)
+            else:
+                    # print('pos not updated')
+                    pass
+        else:
             self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
-            self.__update_agent_view(agent_i)
+            
 
     def __next_pos(self, curr_pos, move):
         if move == 0:  # down
