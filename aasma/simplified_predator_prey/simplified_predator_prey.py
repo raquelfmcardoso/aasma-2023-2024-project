@@ -122,7 +122,6 @@ class SimplifiedPredatorPrey(gym.Env):
         self._agent_dones = [False for _ in range(self.n_agents)]
         self._prey_alive = [True for _ in range(self.n_preys)]
         self._prey_alive2 = [True for _ in range(self.n_preys2)]
-        self._prey_alive2 = [True for _ in range(self.n_preys2)]
         self._hp_status = [2 for _ in range(self.n_agents)] # 2 is the max hp
 
         #self.get_agent_obs()
@@ -184,7 +183,7 @@ class SimplifiedPredatorPrey(gym.Env):
         for i in range(self.n_agents):
             self._total_episode_reward[i] += rewards[i]
 
-        print(f"Health {self._hp_status}")
+        #print(f"Health {self._hp_status}")
         #self.get_agent_obs()
         #self.get_prey_obs()
         #self.get_prey2_obs()
@@ -594,6 +593,8 @@ class SimplifiedPredatorPrey(gym.Env):
                 self.prey2_pos[prey_i] = next_pos
                 self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
                 self.__update_prey2_view(prey_i)
+        else:
+            self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
 
     def __update_agent_view(self, agent_i):
         self._full_obs[self.agent_pos[agent_i][0]][self.agent_pos[agent_i][1]] = PRE_IDS['agent'] + str(agent_i + 1)
@@ -644,8 +645,6 @@ class SimplifiedPredatorPrey(gym.Env):
         for agent_i in range(self.n_agents):
             if self._agent_dones[agent_i] is False:
                 for neighbour in self.__get_neighbour_coordinates(self.agent_pos[agent_i]):
-                    if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
-                        fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
                     if self._full_obs[neighbour[0]][neighbour[1]] != PRE_IDS['wall']:
                         fill_cell(img, neighbour, cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
                 fill_cell(img, self.agent_pos[agent_i], cell_size=CELL_SIZE, fill=AGENT_NEIGHBORHOOD_COLOR, margin=0.1)
