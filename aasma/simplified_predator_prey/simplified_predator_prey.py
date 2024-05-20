@@ -43,6 +43,7 @@ class SimplifiedPredatorPrey(gym.Env):
         self._required_captors = required_captors
         self._n_obstacles = n_obstacles
         self._vision_range = vision_range
+        self._more_vision_range = vision_range + 3
 
         self.action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
         self.agent_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
@@ -405,8 +406,8 @@ class SimplifiedPredatorPrey(gym.Env):
             _prey_i_wall_obs = []
             #_agent_i_obs = [pos[0] / (self._grid_shape[0] - 1), pos[1] / (self._grid_shape[1] - 1)]  # coordinates
 
-            for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
-                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+            for row in range(max(0, pos[0] - self._more_vision_range), min(pos[0] + self._more_vision_range + 1, self._grid_shape[0])):
+                for col in range(max(0, pos[1] - self._more_vision_range), min(pos[1] + self._more_vision_range + 1, self._grid_shape[1])):
                     if (PRE_IDS['prey'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
                         # Only append if no wall was detected and the prey is not ourselves
                         _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
@@ -417,21 +418,21 @@ class SimplifiedPredatorPrey(gym.Env):
                         _prey_i_agent_obs.append([row, col])
 
             # Add grid's borders as walls                    
-            if (pos[0] - self._vision_range < 0):
-                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+            if (pos[0] - self._more_vision_range < 0):
+                for col in range(max(0, pos[1] - self._more_vision_range), min(pos[1] + self._more_vision_range + 1, self._grid_shape[1])):
                     if (not self.wall_in_path(pos, [-1, col])):
                         _prey_i_wall_obs.append([-1, col])
-            elif (pos[0] + self._vision_range > self._grid_shape[0]):
-                for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
+            elif (pos[0] + self._more_vision_range > self._grid_shape[0]):
+                for col in range(max(0, pos[1] - self._more_vision_range), min(pos[1] + self._more_vision_range + 1, self._grid_shape[1])):
                     if (not self.wall_in_path(pos, [self._grid_shape[0], col])):
                         _prey_i_wall_obs.append([self._grid_shape[0], col])
 
-            if (pos[1] - self._vision_range < 0):
-                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+            if (pos[1] - self._more_vision_range < 0):
+                for row in range(max(0, pos[0] - self._more_vision_range), min(pos[0] + self._more_vision_range + 1, self._grid_shape[0])):
                     if (not self.wall_in_path(pos, [row, -1])):
                         _prey_i_wall_obs.append([row, -1])
-            elif (pos[1] + self._vision_range > self._grid_shape[1]):
-                for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
+            elif (pos[1] + self._more_vision_range > self._grid_shape[1]):
+                for row in range(max(0, pos[0] - self._more_vision_range), min(pos[0] + self._more_vision_range + 1, self._grid_shape[0])):
                     if (not self.wall_in_path(pos, [row, self._grid_shape[1]])):
                         _prey_i_wall_obs.append([row, self._grid_shape[1]])
 
