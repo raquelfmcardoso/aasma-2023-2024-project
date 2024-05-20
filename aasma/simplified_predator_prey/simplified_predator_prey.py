@@ -29,7 +29,8 @@ class SimplifiedPredatorPrey(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
     
     def __init__(self, grid_shape=(5, 5), n_agents=2, n_preys=1, n_preys2=1, prey_move_probs=(0.175, 0.175, 0.175, 0.175, 0.3),
-                 full_observable=False, penalty=-0.5, step_cost=-0.01, prey_capture_reward=5, max_steps=100, required_captors=2, n_obstacles=10, vision_range=3):
+                 full_observable=False, penalty=-0.5, step_cost=-0.01, prey_capture_reward=5, max_steps=100, required_captors=2, n_obstacles=10, vision_range=3, 
+                 faster_preys=True, higher_vision_preys=True):
         self._grid_shape = grid_shape
         self.n_agents = n_agents
         self.n_preys = n_preys
@@ -43,7 +44,8 @@ class SimplifiedPredatorPrey(gym.Env):
         self._required_captors = required_captors
         self._n_obstacles = n_obstacles
         self._vision_range = vision_range
-        self._more_vision_range = vision_range + 3
+        self._more_vision_range = vision_range + 3 if higher_vision_preys else vision_range
+        self._fast_increment = 1 + faster_preys
 
         self.action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
         self.agent_action_space = MultiAgentActionSpace([spaces.Discrete(5) for _ in range(self.n_agents)])
@@ -586,22 +588,22 @@ class SimplifiedPredatorPrey(gym.Env):
         if self._prey_alive2[prey_i]:
             next_pos = None
             if move == 0:
-                next_pos = [curr_pos[0] + 2, curr_pos[1]]
+                next_pos = [curr_pos[0] + self._fast_increment, curr_pos[1]]
                 if next_pos[0] >= self._grid_shape[0] or \
                     PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
                    next_pos = [curr_pos[0] + 1, curr_pos[1]]
             elif move == 1:
-                next_pos = [curr_pos[0], curr_pos[1] - 2]
+                next_pos = [curr_pos[0], curr_pos[1] - self._fast_increment]
                 if next_pos[1] < 0 or \
                     PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
                     next_pos = [curr_pos[0], curr_pos[1] - 1]
             elif move == 2:
-                next_pos = [curr_pos[0] - 2, curr_pos[1]]
+                next_pos = [curr_pos[0] - self._fast_increment, curr_pos[1]]
                 if next_pos[0] < 0 or \
                     PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
                     next_pos = [curr_pos[0] - 1, curr_pos[1]]
             elif move == 3:
-                next_pos = [curr_pos[0], curr_pos[1] + 2]
+                next_pos = [curr_pos[0], curr_pos[1] + self._fast_increment]
                 if next_pos[1] >= self._grid_shape[1] or \
                     PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
                     next_pos = [curr_pos[0], curr_pos[1] + 1]
