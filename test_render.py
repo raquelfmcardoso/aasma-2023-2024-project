@@ -103,18 +103,21 @@ if __name__ == '__main__':
                     agent_actions.append(agent.action())
                 else:
                     agent_actions.append(-1)
+                print(agent_actions)
 
             for prey in preys:
                 if info['prey_alive'][prey.prey_id]:
                     prey_actions.append(prey.action())
                 else:
                     prey_actions.append(-1)
+                print(prey_actions)
 
             for prey2 in preys2:
                 if info['prey_alive2'][prey2.prey_id]:
                     prey2_actions.append(prey2.action())
                 else:
                     prey2_actions.append(-1)
+                print(prey2_actions)
 
             #agent_actions = [agent.run() for agent in agents]
             #prey_actions = [prey.run() for prey in preys]
