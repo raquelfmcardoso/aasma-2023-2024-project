@@ -115,7 +115,6 @@ class SimplifiedPredatorPrey(gym.Env):
         self.agent_pos = {}
         self.prey_pos = {}
         self.prey2_pos = {}
-        self.prey2_pos = {}
 
         self.__init_full_obs()
         self._step_count = 0
