@@ -577,13 +577,25 @@ class SimplifiedPredatorPrey(gym.Env):
         if self._prey_alive2[prey_i]:
             next_pos = None
             if move == 0:
-                next_pos = [curr_pos[0] + 1, curr_pos[1]]
+                next_pos = [curr_pos[0] + 2, curr_pos[1]]
+                if next_pos[0] >= self._grid_shape[0] or \
+                    PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
+                   next_pos = [curr_pos[0] + 1, curr_pos[1]]
             elif move == 1:
-                next_pos = [curr_pos[0], curr_pos[1] - 1]
+                next_pos = [curr_pos[0], curr_pos[1] - 2]
+                if next_pos[1] < 0 or \
+                    PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
+                    next_pos = [curr_pos[0], curr_pos[1] - 1]
             elif move == 2:
-                next_pos = [curr_pos[0] - 1, curr_pos[1]]
+                next_pos = [curr_pos[0] - 2, curr_pos[1]]
+                if next_pos[0] < 0 or \
+                    PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
+                    next_pos = [curr_pos[0] - 1, curr_pos[1]]
             elif move == 3:
-                next_pos = [curr_pos[0], curr_pos[1] + 1]
+                next_pos = [curr_pos[0], curr_pos[1] + 2]
+                if next_pos[1] >= self._grid_shape[1] or \
+                    PRE_IDS['wall'] in self._full_obs[next_pos[0]][next_pos[1]]:
+                    next_pos = [curr_pos[0], curr_pos[1] + 1]
             elif move == 4:
                 pass
             else:
