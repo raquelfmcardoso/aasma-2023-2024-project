@@ -56,19 +56,24 @@ def create_mixed_preys(n_preys, percentage_greedy, environment):
 
 def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep_time):
     results = np.zeros(n_episodes)
+    agent_steps = {agent.agent_id: [] for agent in agents}
+    agent_preys_captured = {agent.agent_id: 0 for agent in agents}
+    agent_previous_health = {agent.agent_id: 2 for agent in agents}
+
     for episode in range(n_episodes):
         steps = 0
         observations = environment.reset()
-        environment.render()
         info = {}
         info['prey_alive'] = [True for _ in range(len(preys))]
         info['prey_alive2'] = [True for _ in range(len(preys2))]
-        terminals = [False for _ in range(len(agents))]
+        terminals = {agent.agent_id: False for agent in agents}
+
+        #print(episode)
 
         while not all(terminals):
             steps += 1
             for agent in agents:
-                if not (terminals[agent.agent_id]):
+                if not terminals[agent.agent_id]:
                     agent.see(observations[0])
             for prey in preys:
                 if info['prey_alive'][prey.prey_id]:
@@ -80,7 +85,7 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
             agent_actions, prey_actions, prey2_actions = [], [], []
 
             for agent in agents:
-                if not (terminals[agent.agent_id]):
+                if not terminals[agent.agent_id]:
                     agent_actions.append(agent.action())
                 else:
                     agent_actions.append(None)
@@ -97,9 +102,8 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
                 else:
                     prey2_actions.append(None)
 
-
             next_observations, rewards, terminals, info = environment.step(agent_actions, prey_actions, prey2_actions)
-
+            
             environment.render()
 
             if render_sleep_time > 0:
@@ -107,10 +111,31 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
 
             observations = next_observations
 
-        results[episode] = steps
-        print(f"Episode {episode + 1}/{n_episodes}, Steps: {steps}")
+            # Check
+            for agent, action in zip(agents, agent_actions):
+                if action is not None:
+                    if agent_previous_health[agent.agent_id] > 0 and environment._hp_status[agent.agent_id] >= agent_previous_health[agent.agent_id]:
+                        agent_preys_captured[agent.agent_id] += 1
+                        agent_steps[agent.agent_id].append(steps)
+                    agent_previous_health[agent.agent_id] = environment._hp_status[agent.agent_id]
+                #print(agent_preys_captured)
+                #print(agent_steps)
+
+
+        average_steps_per_agent = []
+        for agent_id, steps_list in agent_steps.items():
+            if agent_preys_captured[agent_id] > 0:
+                average_steps = sum(steps_list) / agent_preys_captured[agent_id]
+                average_steps_per_agent.append(average_steps)
+            else:
+                average_steps_per_agent.append(0)
+        #print(average_steps_per_agent)
+
+        results[episode] = sum(average_steps_per_agent) / environment.n_agents
+        #print(results)
 
     environment.close()
+
     return results
 
 if __name__ == '__main__':
@@ -151,10 +176,10 @@ if __name__ == '__main__':
         result = run_multi_agent(environment, agents, preys, preys2, opt.episodes, opt.render_sleep_time)
         results[team] = result
 
-    filename = f"test1_env{environment._grid_shape}_agents{environment.n_agents}_prey{environment.n_preys}_preytwo{environment.n_preys2}_greedy{opt.percentage_greedy*100:.0f}_episodes{opt.episodes}.png"
+    filename = f"test2_env{environment._grid_shape}_agents{environment.n_agents}_prey{environment.n_preys}_preytwo{environment.n_preys2}_greedy{opt.percentage_greedy*100:.0f}_episodes{opt.episodes}.png"
     compare_results(
-        results, title="Average Steps per Episode",
+        results, title="Average steps to capture prey per Episode",
         colors=["orange", "green", "blue"],
         filename=filename
-    
+
     )

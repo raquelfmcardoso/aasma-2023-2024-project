@@ -114,7 +114,7 @@ def plot_confidence_bar(names, means, std_devs, N, title, x_label, y_label, conf
     plt.close()
 
 
-def compare_results(results, confidence=0.95, title="Agents Comparison", metric="Steps Per Episode", colors=None, env=None, num_agents=None, num_prey=None, num_prey2=None, num_episodes=None, percentage_greedy=None):
+def compare_results(results, confidence=0.95, title="Agents Comparison", metric="Steps Per Episode", colors=None,filename=None):
     """Displays a bar plot comparing the performance of different agents/teams.
 
         Parameters
@@ -137,7 +137,6 @@ def compare_results(results, confidence=0.95, title="Agents Comparison", metric=
     means = [result.mean() for result in results.values()]
     stds = [result.std() for result in results.values()]
     N = [result.size for result in results.values()]
-    filename = f"env{env}_agents{num_agents}_prey{num_prey}_preytwo{num_prey2}_greedy{percentage_greedy*100:.0f}_episodes{num_episodes}.png"
 
     plot_confidence_bar(
         names=names,
