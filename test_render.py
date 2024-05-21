@@ -5,11 +5,14 @@ import numpy as np
 from aasma.wrappers import SingleAgentWrapper
 from aasma.simplified_predator_prey import SimplifiedPredatorPrey
 
-from exercise_1_single_random_agent import RandomAgent
-from exercise_1_single_random_agent import RandomPrey
+from agents.random.random_agent import RandomAgent
+from agents.random.random_prey import RandomPrey
 
-from exercise_2_single_random_vs_greedy import GreedyAgent
-from exercise_2_single_random_vs_greedy import GreedyPrey
+from agents.greedy.greedy_agent import GreedyAgent
+from agents.greedy.greedy_prey import GreedyPrey
+
+from agents.bdi.bdi_agent import BdiAgent
+from agents.bdi.bdi_prey import BdiPrey
 
 if __name__ == '__main__':
 
@@ -26,10 +29,11 @@ if __name__ == '__main__':
 
     # 1 - Setup the environment
     environment = SimplifiedPredatorPrey(
-        grid_shape=(25, 15),
+        grid_shape=(7, 7),
         n_agents=2, n_preys=2, n_preys2=2,
         max_steps=100, required_captors=1,
-        n_obstacles=5
+        n_obstacles=1, faster_preys=False,
+        higher_vision_preys=False
     )
 
     # Run
@@ -41,28 +45,14 @@ if __name__ == '__main__':
 
         observations = environment.reset()
 
-        agents = [GreedyAgent(agent_id=0),
-                  GreedyAgent(agent_id=1)
-                  ]
-        # agents = [RandomAgent(environment.prey_action_space[0].n),
-        #          RandomAgent(environment.prey_action_space[1].n),
-        #          RandomAgent(environment.prey_action_space[2].n),
-        #          RandomAgent(environment.prey_action_space[3].n),
-        #          RandomAgent(environment.prey_action_space[4].n),
-        #          RandomAgent(environment.prey_action_space[5].n),
-        #          RandomAgent(environment.prey_action_space[6].n),
-        #          RandomAgent(environment.prey_action_space[7].n),
-        #          RandomAgent(environment.prey_action_space[8].n),
-        #          RandomAgent(environment.prey_action_space[9].n)
-        #          ]
+        agents = [GreedyAgent(agent_id=x) for x in range(2)]
+        agents = [RandomAgent(n_actions=5) for _ in range(2)]
         
-        preys = [GreedyPrey(prey_id=0),
-                 GreedyPrey(prey_id=1)
-                 ]
+        preys = [GreedyPrey(prey_id=x) for x in range(2)]
+        preys = [RandomAgent(n_actions=5) for _ in range(2)]
 
-        preys2 = [GreedyPrey(prey_id=0),
-                  GreedyPrey(prey_id=1)
-                  ]
+        preys2 = [GreedyPrey(prey_id=x) for x in range(2)]
+        preys2 = [RandomAgent(n_actions=5) for _ in range(2)]
 
         environment.render()
         time.sleep(opt.render_sleep_time)
@@ -78,7 +68,24 @@ if __name__ == '__main__':
             for prey2 in preys2:
                 prey2.see(observations[2])
 
-            time.sleep(30)
+            agent_actions, prey_actions, prey2_actions = [], [], []
+            for agent in agents:
+                if not (terminals[agent.agent_id]):
+                    agent_actions.append(agent.action())
+                else:
+                    agent_actions.append(-1)
+
+            for prey in preys:
+                if info['prey_alive'][prey.prey_id]:
+                    prey_actions.append(prey.action())
+                else:
+                    prey_actions.append(-1)
+
+            for prey2 in preys2:
+                if info['prey_alive2'][prey2.prey_id]:
+                    prey2_actions.append(prey2.action())
+                else:
+                    prey2_actions.append(-1)
 
             agent_actions = [agent.action() for agent in agents]
             prey_actions = [prey.action() for prey in preys]
@@ -89,12 +96,12 @@ if __name__ == '__main__':
             print(f"\t Agent Observations: {observations[0]}")
             print(f"\t Prey Observations: {observations[1]}")
             print(f"\t Prey2 Observations: {observations[2]}")
-            for action in agent_actions:
-                print(f"\tAgent Action: {action}\n")
-            for action in prey_actions:
-                print(f"\tPrey Action: {action}\n")
-            for action in prey2_actions:
-                print(f"\tPrey2 Action: {action}\n")
+            for n_action, action in enumerate(agent_actions):
+                print(f"\tAgent {n_action} Action: {action}\n")
+            for n_action, action in enumerate(prey_actions):
+                print(f"\tPrey {n_action} Action: {action}\n")
+            for n_action, action in enumerate(prey2_actions):
+                print(f"\tPrey2 {n_action} Action: {action}\n")
             environment.render()
             time.sleep(opt.render_sleep_time)
 
