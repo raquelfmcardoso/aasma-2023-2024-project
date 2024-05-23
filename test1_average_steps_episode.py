@@ -104,11 +104,11 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
 
             if render_sleep_time > 0:
                 time.sleep(render_sleep_time)
-
+            
             observations = next_observations
 
         results[episode] = steps
-        print(f"Episode {episode + 1}/{n_episodes}, Steps: {steps}")
+        #print(f"Episode {episode + 1}/{n_episodes}, Steps: {steps}")
 
     environment.close()
     return results
