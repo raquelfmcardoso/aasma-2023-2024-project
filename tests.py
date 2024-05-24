@@ -111,7 +111,7 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     errors14 = standard_error(std_devs14, N14, confidence)
     
 
-    fig, axs = plt.subplots(9, 1, figsize=(10, 50))
+    fig, axs = plt.subplots(10, 1, figsize=(10, 90))
     
     x_pos = np.arange(len(names))
 
@@ -220,7 +220,7 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
 
     # Combined bar plot for preys2_greedy_bresults and preys2_bdi_results
     width = 0.35
-    axs[9].bar(x_pos - width/2, means13, yerr=errors13, width=width, align='center', alpha=0.5, color='pruple', ecolor='black', capsize=10, label='Avg number preys2 greedy alive')
+    axs[9].bar(x_pos - width/2, means13, yerr=errors13, width=width, align='center', alpha=0.5, color='purple', ecolor='black', capsize=10, label='Avg number preys2 greedy alive')
     axs[9].bar(x_pos + width/2, means14, yerr=errors14, width=width, align='center', alpha=0.5, color='pink', ecolor='black', capsize=10, label='Avg numbre preys2 bdi alive')
     axs[9].set_ylabel("Avg.number of different types of prey2 alive per episode")
     axs[9].set_xticks(x_pos)
@@ -431,7 +431,7 @@ def create_mixed_preys(n_preys, percentage_greedy, environment):
 def create_mixed_preys_bdi(n_preys, percentage_bdi, environment, family_id):
     n_bdi = int(n_preys * percentage_bdi)
     n_greedy = n_preys - n_bdi
-    preys = create_bdi_preys(n_preys, family_id)
+    preys = create_bdi_preys(n_bdi, family_id)
     preys += create_preys("greedy", n_greedy, environment, start_id=len(preys))
     return preys
 
@@ -449,6 +449,7 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
     preys2_alive_info = [[] for _ in range(n_episodes)] 
 
     for episode in range(n_episodes):
+        print(f"Episode: {episode}")
         steps = 0
         observations = environment.reset()
         info = {}
@@ -472,10 +473,10 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
 
             agent_actions, prey_actions, prey2_actions = [], [], []
 
-            # print(f"Terminals in tests: {terminals}\nInfo of preys in tests: {info['prey_alive']}\nInfo of preys2 in tests: {info['prey_alive2']}")
-            # print(f"Agent ids in tests: {[x.agent_id for x in agents]}")
-            # print(f"Preys ids in tests: {[x.prey_id for x in preys]}")
-            # print(f"Preys2 ids in tests: {[x.prey_id for x in preys2]}")
+            print(f"Terminals in tests: {terminals}\nInfo of preys in tests: {info['prey_alive']}\nInfo of preys2 in tests: {info['prey_alive2']}")
+            print(f"Agent ids in tests: {[x.agent_id for x in agents]}")
+            print(f"Preys ids in tests: {[x.prey_id for x in preys]}")
+            print(f"Preys2 ids in tests: {[x.prey_id for x in preys2]}")
             for agent in agents:
                 if not terminals[agent.agent_id]:
                     agent_actions.append(agent.run())
@@ -565,26 +566,26 @@ if __name__ == '__main__':
     )
 
     teams = {
-        # "Random Team": [
-        #     create_agents("random", environment.n_agents, environment),
-        #     create_preys("random", environment.n_preys, environment),
-        #     create_preys("random", environment.n_preys2, environment)
-        # ],
-        # "Greedy Team": [
-        #     create_agents("greedy", environment.n_agents, environment),
-        #     create_preys("greedy", environment.n_preys, environment),
-        #     create_preys("greedy", environment.n_preys2, environment)
-        # ],
-        # f"RANDOM WITH GREEDY Mixed Team with {opt.percentage_greedy*100}% greedy": [
-        #     create_mixed_agents(environment.n_agents, opt.percentage_greedy, environment),
-        #     create_mixed_preys(environment.n_preys, opt.percentage_greedy, environment),
-        #     create_mixed_preys(environment.n_preys2, opt.percentage_greedy, environment)
-        # ],
-        # "Random Agents Greedy Preys": [
-        #     create_agents("random", environment.n_agents, environment),
-        #     create_preys("greedy", environment.n_preys, environment),
-        #     create_preys("greedy", environment.n_preys2, environment)
-        # ],
+        "Random Team": [
+            create_agents("random", environment.n_agents, environment),
+            create_preys("random", environment.n_preys, environment),
+            create_preys("random", environment.n_preys2, environment)
+        ],
+        "Greedy Team": [
+            create_agents("greedy", environment.n_agents, environment),
+            create_preys("greedy", environment.n_preys, environment),
+            create_preys("greedy", environment.n_preys2, environment)
+        ],
+        f"RANDOM WITH GREEDY Mixed Team with {opt.percentage_greedy*100}% greedy": [
+            create_mixed_agents(environment.n_agents, opt.percentage_greedy, environment),
+            create_mixed_preys(environment.n_preys, opt.percentage_greedy, environment),
+            create_mixed_preys(environment.n_preys2, opt.percentage_greedy, environment)
+        ],
+        "Random Agents Greedy Preys": [
+            create_agents("random", environment.n_agents, environment),
+            create_preys("greedy", environment.n_preys, environment),
+            create_preys("greedy", environment.n_preys2, environment)
+        ],
         "BDI Team": [
             create_agents("bdi", environment.n_agents, environment),
             create_bdi_preys(environment.n_preys, family_id=1),
@@ -614,6 +615,7 @@ if __name__ == '__main__':
     success_rate ={}
 
     for team, (agents, preys, preys2) in teams.items():
+        print(f"Team: {team}")
         steps_result, preys_captured_result, result, preys_alive, preys2_alive, preys_alive_info, preys2_alive_info, success= run_multi_agent(environment, agents, preys, preys2, opt.episodes, opt.render_sleep_time, environment._max_steps)
         steps_results[team] = steps_result
         preys_captured_results[team] = preys_captured_result
