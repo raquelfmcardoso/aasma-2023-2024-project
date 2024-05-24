@@ -173,8 +173,8 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     axs[5].bar(x_pos + width/2, means7, yerr=errors7, width=width, align='center', alpha=0.5, color='orange', ecolor='black', capsize=10, label='Avg number preys random alive')
     axs[5].set_ylabel("Avg. Deer Alive From Family 1")
     axs[5].set_xticks(x_pos)
-    axs[5].set_xticklabels(["50%% Greedy Deer vs 50%% Random Deer"])
-    axs[5].set_title("Avg. Number Of Deer Alive From Family 1 Per Episode With 50%% Greedy & 50%% Random Agents")
+    axs[5].set_xticklabels(["50% Greedy Deer vs 50% Random Deer"])
+    axs[5].set_title("Avg. Number Of Deer Alive From Family 1 Per Episode With 50% Greedy & 50% Random Agents")
     axs[5].yaxis.grid(True)
     axs[5].legend()
     if yscale is not None:
@@ -185,8 +185,8 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     axs[6].bar(x_pos + width/2, means9, yerr=errors9, width=width, align='center', alpha=0.5, color='orange', ecolor='black', capsize=10, label='Avg number preys2 random alive')
     axs[6].set_ylabel("Avg. Deer Alive From Family 2")
     axs[6].set_xticks(x_pos)
-    axs[6].set_xticklabels(["50%% Greedy Deer vs 50%% Random Deer"])
-    axs[6].set_title("Avg. Number Of Deer Alive From Family 2 Per Episode With 50%% Greedy & 50%% Random Agents")
+    axs[6].set_xticklabels(["50% Greedy Deer vs 50% Random Deer"])
+    axs[6].set_title("Avg. Number Of Deer Alive From Family 2 Per Episode With 50% Greedy & 50% Random Agents")
     axs[6].yaxis.grid(True)
     axs[6].legend()
     if yscale is not None:
@@ -211,8 +211,8 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     axs[8].bar(x_pos + width/2, means12, yerr=errors12, width=width, align='center', alpha=0.5, color='pink', ecolor='black', capsize=10, label='Avg number preys bdi alive')
     axs[8].set_ylabel("Avg. Deer Alive From Family 1")
     axs[8].set_xticks(x_pos)
-    axs[8].set_xticklabels(["50%% Bdi Deer vs 50%% Greedy Deer"])
-    axs[8].set_title("Avg. Number Of Deer Alive From Family 1 Per Episode With Bdi Tigers vs 50%% Bdi & 50%% Greedy Deer")
+    axs[8].set_xticklabels(["50% Bdi Deer vs 50% Greedy Deer"])
+    axs[8].set_title("Avg. Number Of Deer Alive From Family 1 Per Episode With Bdi Tigers vs 50% Bdi & 50% Greedy Deer")
     axs[8].yaxis.grid(True)
     axs[8].legend()
     if yscale is not None:
@@ -224,8 +224,8 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     axs[9].bar(x_pos + width/2, means14, yerr=errors14, width=width, align='center', alpha=0.5, color='pink', ecolor='black', capsize=10, label='Avg number preys2 bdi alive')
     axs[9].set_ylabel("Avg. Deer Alive From Family 2")
     axs[9].set_xticks(x_pos)
-    axs[9].set_xticklabels(["50%% Bdi Deer vs 50%% Greedy Deer"])
-    axs[9].set_title("Avg. Number Of Deer Alive From Family 2 Per Episode With Bdi Tigers vs 50%% Bdi & 50%% Greedy Deer")
+    axs[9].set_xticklabels(["50% Bdi Deer vs 50% Greedy Deer"])
+    axs[9].set_title("Avg. Number Of Deer Alive From Family 2 Per Episode With Bdi Tigers vs 50% Bdi & 50% Greedy Deer")
     axs[9].yaxis.grid(True)
     axs[9].legend()
     if yscale is not None:
@@ -524,27 +524,29 @@ def run_multi_agent(environments, agents, preys, preys2, n_episodes, render_slee
             else:
                 average_steps_per_agent.append(0)
 
-
-        #calculates the average steps per agent to consume for this episode
+        # Calculates the average steps per agent to consume for this episode
         steps_results[episode] = sum(average_steps_per_agent) / environment.n_agents
-        #and the average preys consumed per agent for this episode
+        # And the average preys consumed per agent for this episode
         preys_captured_results[episode] = sum(agent_preys_captured.values()) / environment.n_agents
-        #and the steps for this episode
+        # And the steps for this episode
         results[episode] = steps
-        #and the preys alive for this episode
+        # And the preys alive for this episode
         preys_alive_results[episode] = sum(info['prey_alive'])
-        #and the preys2 alive for this episode
+        # And the preys2 alive for this episode
         preys2_alive_results[episode] = sum(info['prey_alive2'])
 
-        #passing the preys info per episode to check if random or greedy
+        # Passing the preys info per episode to check if random or greedy
         preys_alive_info[episode] = [prey for prey, alive in zip(preys, info['prey_alive']) if alive]
         preys2_alive_info[episode] = [prey for prey, alive in zip(preys2, info['prey_alive2']) if alive]
 
-        #success rate
-        if steps < max_steps and sum(info['prey_alive']) == 0 and sum(info['prey_alive2']) == 0:
-            success_rate[episode] = 1
-        else: 
+        # Success rate
+        if steps >= max_steps:
             success_rate[episode] = 0
+        else:
+            prey_alive = sum(info['prey_alive'])
+            prey2_alive = sum(info['prey_alive2'])
+            success_rate[episode] = (environment.n_preys - prey_alive)/environment.n_preys if prey_alive < prey2_alive \
+                else (environment.n_preys2 - prey2_alive)/environment.n_preys2
 
     environment.close()
 
@@ -595,16 +597,11 @@ if __name__ == '__main__':
             create_mixed_preys(environments[0].n_preys, opt.percentage_greedy, environments[0]),
             create_mixed_preys(environments[0].n_preys2, opt.percentage_greedy, environments[0])
         ],
-        # "Random Agents vs Greedy Preys": [
-        #     create_agents("random", environment.n_agents, environment),
-        #     create_preys("greedy", environment.n_preys, environment),
-        #     create_preys("greedy", environment.n_preys2, environment)
-        # ],
         f"Bdi Tigers vs {opt.percentage_bdi*100}% Bdi & {(1 - opt.percentage_bdi)*100}% Greedy Deer": [
             create_agents("bdi", environments[0].n_agents, environments[0]),
             create_mixed_preys_bdi(environments[0].n_preys, opt.percentage_bdi, environments[0], family_id=1),
             create_mixed_preys_bdi(environments[0].n_preys2, opt.percentage_bdi, environments[0], family_id=2)
-        ],
+        ]
 
     }
 
@@ -627,8 +624,6 @@ if __name__ == '__main__':
         print(f"Team: {team}")
         steps_result, preys_captured_result, result, preys_alive, preys2_alive, preys_alive_info, preys2_alive_info, success = \
             run_multi_agent(environments, agents, preys, preys2, opt.episodes, opt.render_sleep_time, environments[0]._max_steps, 2 if "Bdi" in team else 1)
-        print(f"Preys alive for team {team}: {preys_alive}")
-        print(f"Preys 2 alive for team {team}: {preys2_alive}")
         steps_results[team] = steps_result
         preys_captured_results[team] = preys_captured_result
         results[team] = result
