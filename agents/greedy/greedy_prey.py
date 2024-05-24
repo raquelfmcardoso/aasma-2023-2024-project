@@ -62,6 +62,9 @@ class GreedyPrey(Agent):
         # print(f"Closest agent for prey {self.prey_id}: {closest_agent}")
         return self.direction_to_go(prey_position, closest_agent, possible_moves) if agent_found else random.choice(possible_moves)
 
+    def run(self):
+        return self.action()
+
     # ################# #
     # Auxiliary Methods #
     # ################# #
