@@ -18,6 +18,7 @@ from agents.greedy.greedy_prey import GreedyPrey
 from agents.bdi.bdi_agent import BdiAgent
 from agents.bdi.bdi_prey import BdiPrey
 
+
 def z_table(confidence):
     """Hand-coded Z-Table
 
@@ -56,7 +57,7 @@ def standard_error(std_dev, n, confidence):
 
 def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs2, N2, y_label2, means3, std_devs3, N3, y_label3, means4, std_devs4, N4, y_label4,
                          means5, std_devs5, N5, y_label5, means6, std_devs6, N6, means7, std_devs7, N7, means8, std_devs8, N8,
-                         means9, std_devs9, N9, title, confidence, show=False, filename=None, colors=None, yscale=None):
+                         means9, std_devs9, N9, means10, std_devs10, N10, y_label10, title, confidence, show=False, filename=None, colors=None, yscale=None):
     """Creates a bar plot for comparing different agents/teams on two metrics.
 
     Parameters
@@ -101,10 +102,11 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     errors6 = standard_error(std_devs6, N6, confidence)
     errors7 = standard_error(std_devs7, N7, confidence)
     errors8 = standard_error(std_devs8, N8, confidence)
-    errors9 = standard_error(std_devs9, N9, confidence) 
+    errors9 = standard_error(std_devs9, N9, confidence)
+    errors10 = [standard_error(std_devs10[i], N10[i], confidence) for i in range(len(means10))]
     
 
-    fig, axs = plt.subplots(7, 1, figsize=(10, 50))
+    fig, axs = plt.subplots(8, 1, figsize=(10, 50))
     
     x_pos = np.arange(len(names))
 
@@ -186,6 +188,16 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
     if yscale is not None:
         axs[6].set_yscale(yscale)
 
+    # Fifth metric plot
+    axs[7].bar(x_pos, means10, yerr=errors5, align='center', alpha=0.5, color=colors if colors is not None else "purple", ecolor='black', capsize=10)
+    axs[7].set_ylabel(y_label10)
+    axs[7].set_xticks(x_pos)
+    axs[7].set_xticklabels(names)
+    axs[7].set_title(y_label10)
+    axs[7].yaxis.grid(True)
+    if yscale is not None:
+        axs[7].set_yscale(yscale)
+
     
     plt.tight_layout()
     if filename is not None:
@@ -194,7 +206,7 @@ def plot_confidence_bar(names, means1, std_devs1, N1, y_label1, means2, std_devs
         plt.show()
     plt.close()
 
-def compare_results(results1, results2, results3, results4, results5, results6, results7, results8, results9, confidence=0.95, title=None, metric1="Steps to capture prey Per Episode", metric2="Preys Captured Per Episode", metric3="Steps Per Episode", metric4="Number preys alive", metric5="Number preys2 alive", colors=None, filename=None):
+def compare_results(results1, results2, results3, results4, results5, results6, results7, results8, results9, results10, confidence=0.95, title=None, metric1="Steps to capture prey Per Episode", metric2="Preys Captured Per Episode", metric3="Steps Per Episode", metric4="Number preys alive", metric5="Number preys2 alive", metric10= "Sucess rate per episode", colors=None, filename=None):
     """Displays a combined bar plot comparing the performance of different agents/teams on two metrics.
 
     Parameters
@@ -237,20 +249,24 @@ def compare_results(results1, results2, results3, results4, results5, results6, 
     N5 = [result.size for result in results5.values()]
 
     #prey
-    means6 = np.mean(preys_greedy_results)
-    stds6 = np.std(preys_greedy_results)
-    N6 = len(preys_greedy_results)
-    means7 = np.mean(preys_random_results)
-    stds7 = np.std(preys_random_results)
-    N7 = len(preys_random_results)
+    means6 = np.mean(results6)
+    stds6 = np.std(results6)
+    N6 = len(results6)
+    means7 = np.mean(results7)
+    stds7 = np.std(results7)
+    N7 = len(results7)
 
     #prey2
-    means8 = np.mean(preys2_greedy_results)
-    stds8 = np.std(preys2_greedy_results)
-    N8 = len(preys2_greedy_results)
-    means9 = np.mean(preys2_random_results)
-    stds9 = np.std(preys2_random_results)
-    N9 = len(preys2_random_results)
+    means8 = np.mean(results8)
+    stds8 = np.std(results8)
+    N8 = len(results8)
+    means9 = np.mean(results9)
+    stds9 = np.std(results9)
+    N9 = len(results9)
+
+    means10 = [result.mean() for result in results10.values()]
+    stds10 = [result.std() for result in results10.values()]
+    N10 = [result.size for result in results10.values()]
 
     plot_confidence_bar(
         names=names,
@@ -286,6 +302,10 @@ def compare_results(results1, results2, results3, results4, results5, results6, 
         means9=means9,
         std_devs9=stds9,
         N9=N9,
+        means10=means10,
+        std_devs10=stds10,
+        N10=N10,
+        y_label10=f"Avg. {metric10}",
         confidence=confidence,
         title=title,
         show=True,
@@ -332,12 +352,13 @@ def create_mixed_preys(n_preys, percentage_greedy, environment):
     preys += create_preys("random", n_random, environment, start_id=len(preys))
     return preys
 
-def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep_time):
+def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep_time, max_steps):
     steps_results = np.zeros(n_episodes)
     preys_captured_results = np.zeros(n_episodes)
     results = np.zeros(n_episodes)
     preys_alive_results = np.zeros(n_episodes)
     preys2_alive_results = np.zeros(n_episodes)
+    success_rate = np.zeros(n_episodes)
     agent_steps = {agent.agent_id: [] for agent in agents}
     agent_preys_captured = {agent.agent_id: 0 for agent in agents}
     agent_previous_health = {agent.agent_id: 2 for agent in agents}
@@ -354,6 +375,8 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
 
         while not all(terminals):
             steps += 1
+            if steps >= max_steps:
+                break  # Exit the loop if maximum steps are reached
             for agent in agents:
                 if not terminals[agent.agent_id]:
                     agent.see(observations[0])
@@ -400,6 +423,7 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
                         agent_steps[agent.agent_id].append(steps)
                     agent_previous_health[agent.agent_id] = environment._hp_status[agent.agent_id]
 
+
         #calculate average steps per agent
         average_steps_per_agent = []
         for agent_id, steps_list in agent_steps.items():
@@ -408,6 +432,7 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
                 average_steps_per_agent.append(average_steps)
             else:
                 average_steps_per_agent.append(0)
+
 
         #calculates the average steps per agent to consume for this episode
         steps_results[episode] = sum(average_steps_per_agent) / environment.n_agents
@@ -424,11 +449,16 @@ def run_multi_agent(environment, agents, preys, preys2, n_episodes, render_sleep
         preys_alive_info[episode] = [prey for prey, alive in zip(preys, info['prey_alive']) if alive]
         preys2_alive_info[episode] = [prey for prey, alive in zip(preys2, info['prey_alive2']) if alive]
 
+        #sucess rate
+        if steps < max_steps and sum(info['prey_alive']) == 0 and sum(info['prey_alive2']) == 0:
+            success_rate[episode] = 1
+        else: 
+            sucess_rate[episode] = 0
 
 
     environment.close()
 
-    return steps_results, preys_captured_results, results, preys_alive_results, preys2_alive_results, preys_alive_info, preys2_alive_info
+    return steps_results, preys_captured_results, results, preys_alive_results, preys2_alive_results, preys_alive_info, preys2_alive_info, success_rate
 
 
 if __name__ == '__main__':
@@ -446,21 +476,32 @@ if __name__ == '__main__':
     )
 
     teams = {
-        "Random Team": [
-            create_agents("random", environment.n_agents, environment),
+        # "Random Team": [
+        #     create_agents("random", environment.n_agents, environment),
+        #     create_preys("random", environment.n_preys, environment),
+        #     create_preys("random", environment.n_preys2, environment)
+        # ],
+        # "Greedy Team": [
+        #     create_agents("greedy", environment.n_agents, environment),
+        #     create_preys("greedy", environment.n_preys, environment),
+        #     create_preys("greedy", environment.n_preys2, environment)
+        # ],
+        # f"Mixed Team with {opt.percentage_greedy*100}% greedy": [
+        #     create_mixed_agents(environment.n_agents, opt.percentage_greedy, environment),
+        #     create_mixed_preys(environment.n_preys, opt.percentage_greedy, environment),
+        #     create_mixed_preys(environment.n_preys2, opt.percentage_greedy, environment)
+        # ],
+        # "Random Agents Greedy Preys": [
+        #     create_agents("random", environment.n_agents, environment),
+        #     create_preys("greedy", environment.n_preys, environment),
+        #     create_preys("greedy", environment.n_preys2, environment)
+        # ],
+        "Greedy Agents Random Preys": [
+            create_agents("greedy", environment.n_agents, environment),
             create_preys("random", environment.n_preys, environment),
             create_preys("random", environment.n_preys2, environment)
         ],
-        "Greedy Team": [
-            create_agents("greedy", environment.n_agents, environment),
-            create_preys("greedy", environment.n_preys, environment),
-            create_preys("greedy", environment.n_preys2, environment)
-        ],
-        f"Mixed Team with {opt.percentage_greedy*100}% greedy": [
-            create_mixed_agents(environment.n_agents, opt.percentage_greedy, environment),
-            create_mixed_preys(environment.n_preys, opt.percentage_greedy, environment),
-            create_mixed_preys(environment.n_preys2, opt.percentage_greedy, environment)
-        ]
+
     }
 
     steps_results = {}
@@ -472,14 +513,16 @@ if __name__ == '__main__':
     preys_random_results = []
     preys2_greedy_results = []
     preys2_random_results = []
+    sucess_rate ={}
 
     for team, (agents, preys, preys2) in teams.items():
-        steps_result, preys_captured_result, result, preys_alive, preys2_alive, preys_alive_info, preys2_alive_info = run_multi_agent(environment, agents, preys, preys2, opt.episodes, opt.render_sleep_time)
+        steps_result, preys_captured_result, result, preys_alive, preys2_alive, preys_alive_info, preys2_alive_info, sucess= run_multi_agent(environment, agents, preys, preys2, opt.episodes, opt.render_sleep_time, environment._max_steps)
         steps_results[team] = steps_result
         preys_captured_results[team] = preys_captured_result
         results[team] = result
         preys_alive_results[team] = preys_alive   
         preys2_alive_results[team] = preys2_alive
+        sucess_rate[team] = sucess
 
         if "Mixed Team" in team:
             
@@ -504,7 +547,7 @@ if __name__ == '__main__':
 
     compare_results(
         steps_results, preys_captured_results, results,preys_alive_results, preys2_alive_results,
-        preys_greedy_results, preys_random_results, preys2_greedy_results, preys2_random_results,
+        preys_greedy_results, preys_random_results, preys2_greedy_results, preys2_random_results, sucess_rate,
         filename=filename
     )
 
