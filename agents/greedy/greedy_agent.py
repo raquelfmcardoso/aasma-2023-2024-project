@@ -12,7 +12,7 @@ DOWN, LEFT, UP, RIGHT, STAY = range(N_ACTIONS)
 class GreedyAgent(Agent):
 
     """
-    A baseline agent for the SimplifiedPredatorPrey environment.
+    Greedy predator for the Tigers vs Deer environment.
     The greedy agent finds the nearest prey and moves towards it.
     """
 
@@ -22,41 +22,23 @@ class GreedyAgent(Agent):
         self.n_actions = N_ACTIONS
 
     def action(self) -> int:
-        # print(f"Agents' observations:", self.observation)
-        # print(f"Agent {self.agent_id}'s observation:", self.observation[self.agent_id])
-        # print(f"Agent {self.agent_id}'s coordinates:", self.observation[self.agent_id][0])
-        # print(f"Agent {self.agent_id}'s observed agents:", self.observation[self.agent_id][1])
-        # print(f"Agent {self.agent_id}'s observed preys:", self.observation[self.agent_id][2])
-        # print(f"Agent {self.agent_id}'s observed walls:", self.observation[self.agent_id][3])
-
         agent_position = self.observation[self.agent_id][0][1]
         agent_positions = self.observation[self.agent_id][1]
         prey_positions = self.observation[self.agent_id][2]
         wall_positions = self.observation[self.agent_id][3]
         # We get the complete observations of agents we can see
         agent_id_absolute_obs = {}
-        # We only get the amount of preys an agent we can't see can see
-        agent_id_relative_obs = {}
-
-        if (self.agent_id == 0):
-            print(f"Agent Observations: {self.observation}")
-        print(f"AGENT {self.agent_id}'S OBSERVATIONS")
-        print(f"Agent Observations: {self.observation[self.agent_id]}")
-        print(f"Agent Position: {agent_position}")
-        print(f"Agents Positions: {agent_positions}")
-        print(f"Prey Positions: {prey_positions}")
-        print(f"Wall Positions: {wall_positions}")
 
         agent_id_absolute_obs[self.agent_id] = self.observation[self.agent_id]
         for agent in agent_positions:
             agent_id_absolute_obs[agent[0]] = self.observation[agent[0]]
 
-        for agent_observation in self.observation:
-            if len(agent_observation) != 4:
-                continue
-            if (agent_observation[0][0] not in agent_id_absolute_obs):
-                agent_id_relative_obs[tuple(agent_observation[0][1])] = len(self.observation[agent_observation[0][0]][2])
-
+        nearby_preys = prey_positions
+        for observation in agent_id_absolute_obs:
+            for pos in agent_id_absolute_obs[observation][1]:
+                if pos not in nearby_preys:
+                    nearby_preys.append(pos)
+        
         moves = {
                  DOWN: move if (move := self._apply_move([agent_position[0], agent_position[1]], DOWN)) not in wall_positions else None,
                  LEFT: move if (move := self._apply_move([agent_position[0], agent_position[1]], LEFT)) not in wall_positions else None,
@@ -66,11 +48,9 @@ class GreedyAgent(Agent):
                 }
         # Only account for moves that don't try to move into a wall
         possible_moves = [x for x in moves if moves[x] != None]
-        # print("Agent's possible moves:", possible_moves)
 
-        closest_prey = self.closest_prey(agent_position, prey_positions)
+        closest_prey = self.closest_prey(agent_position, nearby_preys)
         prey_found = closest_prey is not None
-        # print("Closest prey:", closest_prey)
         return self.direction_to_go(agent_position, closest_prey, possible_moves) if prey_found else random.choice(possible_moves)
 
     def run(self) -> int:
@@ -82,13 +62,12 @@ class GreedyAgent(Agent):
 
     def direction_to_go(self, agent_position, prey_position, possible_moves):
         """
-        Given the position of the agent and the position of a prey,
+        Given the position of the predator, the position of a prey, and the possible moves,
         returns the action to take in order to close the distance
         """
         if (agent_position == prey_position):
             return STAY
         distances = np.array(prey_position) - np.array(agent_position)
-        # print(f"AGENT: Distance between agent {agent_position} and prey {prey_position}: {distances}")
         abs_distances = np.absolute(distances)
         if abs_distances[0] > abs_distances[1]:
             return self._close_vertically(distances, possible_moves, True)
