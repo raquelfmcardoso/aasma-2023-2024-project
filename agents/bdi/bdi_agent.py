@@ -348,6 +348,8 @@ class BdiAgent(Agent):
         n_agents = len(self.observation)
         # Compute our relative observations (agents not included in absolute observations aren't seen by us)
         for agent_id in range(n_agents):
+            if len(self.observation[agent_id]) != 4:
+                continue
             if (agent_id not in self.beliefs['absolute_obs']): # if we can't see the agent
                 # {agent_id} : [{amount_of_preys}, [{agent_coordenates}]]
                 agent_id_relative_obs[agent_id] = [len(self.observation[agent_id][2]), self.observation[agent_id][0][1]]
@@ -356,11 +358,15 @@ class BdiAgent(Agent):
 
         # Finish absolute observations to assign cooperations
         for agent_id in range(n_agents):
+            if len(self.observation[agent_id]) != 4:
+                continue
             self.compute_absolute_observations(agent_id)
 
         print(f"Absolute Observations on agent {self.agent_id}: {self.beliefs['absolute_obs']}")
 
         for agent_id in self.conventions:
+            if len(self.observation[agent_id]) != 4:
+                continue
             print(f"Is agent {self.agent_id} cooperating? {self.cooperating}")
             self.assign_cooperations(agent_id)
 
@@ -501,7 +507,7 @@ class BdiAgent(Agent):
                 self.desires['desired_location'] = moves[possible_moves[deterministic_index]]
             # Move towards the closest agent with observations, preferably at least 2 preys
             else:
-                print(f"Pair of agents {[self.agent_id, cooperation_agent_id]} found relative observations")
+                print(f"Pair of agents {[self.agent_id, cooperation_agent_id]} found relative observations, 2: {possible_agents_2}, 1: {possible_agents_1}")
                 average_coords = [round((our_agent_coords[0] + other_agent_coords[0])/2), round((our_agent_coords[1] + other_agent_coords[1])/2)]
 
                 iterator = possible_agents_2 if len(possible_agents_2) > 0 else possible_agents_1
@@ -510,8 +516,8 @@ class BdiAgent(Agent):
                     distances.append([agent_id, cityblock(relative_obs[agent_id][1], average_coords)])
                 distances.sort(key=lambda x: x[1])
 
-                print(f"Agents moving towards {distances[0][1]}")
-                self.desires['desired_location'] = distances[0][1]
+                print(f"Agents moving towards {relative_obs[distances[0][0]][1]}")
+                self.desires['desired_location'] = relative_obs[distances[0][0]][1]
 
     def deliberation(self):
         # Select intentions based on agent's desires and beliefs
