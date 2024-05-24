@@ -17,6 +17,10 @@
 
     $ python test_render.py
 
+4. Execute tests
+
+    $ python tests.py
+
 ### Code contributors:
 
 - Jiqi Wang (@JiqiWang)

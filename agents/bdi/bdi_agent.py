@@ -207,6 +207,10 @@ class BdiAgent(Agent):
                 self.desires['desired_location'] = moves[possible_moves[0]]
                 return
             
+            # Can't reach prey
+            if len(possible_moves) == 0:
+                return
+            
             our_distances = []
             other_distances = []
             our_agent_coords = self.beliefs['agent_position']

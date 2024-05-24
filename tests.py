@@ -5,7 +5,7 @@ import math
 import matplotlib.pyplot as plt
 
 from aasma.wrappers import SingleAgentWrapper
-from aasma.simplified_predator_prey import SimplifiedPredatorPrey
+from aasma.tigers_deer import TigersDeer
 
 from aasma.utils import compare_results
 
