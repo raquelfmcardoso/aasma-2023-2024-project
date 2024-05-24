@@ -568,7 +568,7 @@ if __name__ == '__main__':
 
     for i in range(opt.episodes):
         environments.append(
-            SimplifiedPredatorPrey(
+            TigersDeer(
                 grid_shape=(15, 15),
                 n_agents=10, n_preys=6, n_preys2=6,
                 max_steps=100, required_captors=1,
