@@ -39,7 +39,7 @@ class BdiPrey(Agent):
             prey_id_absolute_obs[prey[0]] = self.observation[prey[0]] # {prey_id} : {self.observations[prey_id]}
 
         for prey_observation in self.observation:
-            #check if prey_observation is a empty list
+            # Check if prey_observation is a empty list
             if len(prey_observation) != 4:
                 continue
             if (prey_observation[0][0] not in prey_id_absolute_obs): # if we can't see the prey
@@ -76,19 +76,11 @@ class BdiPrey(Agent):
         # distance to unseen preys
         self.beliefs['distances_unseen_preys'] = [cityblock(prey_position, prey) for prey in self.beliefs['unseen_prey_positions']]
 
-        #print(f"\tPrey Position: {self.beliefs['prey_position']}\n")
-        #print(f"\tPreys Positions: {self.beliefs['agent_positions']}\n")
-        #print(f"\Agents Positions: {self.beliefs['prey_positions']}\n")
-        #print(f"\Wall Positions: {self.beliefs['wall_positions']}\n")
-
     def update_desires(self):
         agents_positions = self.beliefs['agent_positions'] + self.beliefs['unseen_agent_positions']
         distances_agents = self.beliefs['distances_nearby_agents'] + self.beliefs['distances_unseen_agents']
         unseen_preys_positions = self.beliefs['unseen_prey_positions']
         unseen_preys_distances = self.beliefs['distances_unseen_preys']
-
-        print(f"\tAgents Positions: {agents_positions}\n")
-        print(f"\tDistances Agents: {distances_agents}\n")
 
         for distance in distances_agents:
             if distance == 0:
@@ -101,7 +93,6 @@ class BdiPrey(Agent):
             if total_weight != 0:
                 position = [int(weighted_x / total_weight), int(weighted_y / total_weight)]
                 self.desires['run_location'] = position
-                print(f"\tRun Location: {position}\n")
     
         elif unseen_preys_positions and unseen_preys_distances:
             weighted_x = sum(prey[0] / distance for prey, distance in zip(unseen_preys_positions, unseen_preys_distances))
@@ -110,36 +101,37 @@ class BdiPrey(Agent):
             if total_weight != 0:
                 position = [int(weighted_x / total_weight), int(weighted_y / total_weight)]
                 self.desires['run_location'] = position
-                print(f"\tRelative Run Location: {position}\n")
             
     def deliberation(self):    
         # Select intentions based on agent's desires and beliefs
         if 'run_location' in self.desires:
             self.intentions['run'] = self.desires['run_location']
-            #print(f"\Run: {self.intentions['run']}\n")
         else:
             self.intentions['run'] = 'random'
 
     def action(self):
-        preys_positions = [prey[1] for prey in self.beliefs['prey_positions']]
-        wall_agents_positions = preys_positions + self.beliefs['wall_positions']
+        agent_positions = self.beliefs['agent_positions']
+        prey_positions = [x[1] for x in self.beliefs['prey_positions'] if x[0] > self.prey_id]
+        wall_positions = self.beliefs['wall_positions']
 
         moves = {
-                 DOWN: move if (move := self._apply_move([self.beliefs['prey_position'][0], self.beliefs['prey_position'][1]], DOWN)) not in wall_agents_positions else None,
-                 LEFT: move if (move := self._apply_move([self.beliefs['prey_position'][0], self.beliefs['prey_position'][1]], LEFT)) not in wall_agents_positions else None,
-                 UP: move if (move := self._apply_move([self.beliefs['prey_position'][0], self.beliefs['prey_position'][1]], UP)) not in wall_agents_positions else None,
-                 RIGHT: move if (move := self._apply_move([self.beliefs['prey_position'][0], self.beliefs['prey_position'][1]], RIGHT)) not in wall_agents_positions else None,
-                 STAY: [self.beliefs['prey_position'][0], self.beliefs['prey_position'][1]]
+                 DOWN: move if (move := self._apply_move(self.beliefs['prey_position'], DOWN)) \
+                    not in wall_positions and move not in prey_positions and move not in agent_positions else None,
+                 LEFT: move if (move := self._apply_move(self.beliefs['prey_position'], LEFT)) \
+                    not in wall_positions and move not in prey_positions and move not in agent_positions else None,
+                 UP: move if (move := self._apply_move(self.beliefs['prey_position'], UP)) \
+                    not in wall_positions and move not in prey_positions and move not in agent_positions else None,
+                 RIGHT: move if (move := self._apply_move(self.beliefs['prey_position'], RIGHT)) \
+                    not in wall_positions and move not in prey_positions and move not in agent_positions else None,
+                 STAY: self.beliefs['prey_position']
                 }
         # Only account for moves that don't try to move into a wall
         possible_moves = [x for x in moves if moves[x] != None]
         
         if self.intentions['run'] == 'random': # move randomly
             move = np.random.choice(possible_moves)
-            #print(f"\Move Randomly: {move}\n")
-        else: # move to the desired location
+        else: # Move to the desired location
             move = self.direction_to_go(self.beliefs['prey_position'], self.intentions['run'], possible_moves)
-            #print(f"\Move Location: {move}\n")
         return move
         
     def run(self):
@@ -159,10 +151,7 @@ class BdiPrey(Agent):
         returns the action to take in order to close the distance
         """
         distances = np.array(prey_position) - np.array(agent_position)
-        # print(f"PREY: Distance between agent {agent_position} and prey {prey_position}: {distances}")
         abs_distances = np.absolute(distances)
-        # print(f"PREY: Distance between prey @ {prey_position} and predator @ {agent_position} is {distances}")
-        # TODO: Test swapping closing call, remember to call the other function in the else branch of the _close_x function
         if abs_distances[0] > abs_distances[1]:
             return self._close_vertically(distances, possible_moves, True)
         elif abs_distances[0] < abs_distances[1]:

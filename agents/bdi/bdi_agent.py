@@ -282,7 +282,7 @@ class BdiAgent(Agent):
                     print(f"PREDATORS ARE STUCK WHEN TRYING TO MOVE")
                     return                    
 
-                deterministic_index = (our_agent_coords[0] + other_agent_coords[1]) * (our_agent_coords[1] + other_agent_coords[0]) % size
+                deterministic_index = ((our_agent_coords[0] * other_agent_coords[1]) + (our_agent_coords[1] * other_agent_coords[0])) % size
                 self.desires['desired_location'] = moves[possible_moves[deterministic_index]]
             # Move towards the closest agent with observations, preferably at least 2 preys
             else:

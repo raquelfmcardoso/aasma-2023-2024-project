@@ -161,15 +161,16 @@ class SimplifiedPredatorPrey(gym.Env):
         for prey_i in range(self.n_preys):
             if self._prey_alive[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey_pos[prey_i])
-                wall_count = 0
+                counter = 0
                 curr_pos = copy.copy(self.prey_pos[prey_i])
                 prey_neighbours = [[curr_pos[0] + 1, curr_pos[1]], [curr_pos[0] - 1, curr_pos[1]],
                                    [curr_pos[0], curr_pos[1] + 1], [curr_pos[0], curr_pos[1] -1]]
                 for pos in prey_neighbours:
                     if pos[0] < 0 or pos[1] < 0 or pos[0] >= self._grid_shape[0] or pos[1] >= self._grid_shape[1] or\
-                        self._full_obs[pos[0]][pos[1]] == PRE_IDS['wall'] :
-                        wall_count += 1
-                if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):
+                        PRE_IDS['wall'] == self._full_obs[pos[0]][pos[1]] or PRE_IDS['prey'] in self._full_obs[pos[0]][pos[1]] or\
+                        PRE_IDS['prey2'] in self._full_obs[pos[0]][pos[1]]:
+                        counter += 1
+                if predator_neighbour_count >= self._required_captors or (counter > self._required_captors and predator_neighbour_count > 0):
                     _reward = self._prey_capture_reward
                     self._prey_alive[prey_i] = False
                     self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
@@ -182,15 +183,16 @@ class SimplifiedPredatorPrey(gym.Env):
         for prey_i in range(self.n_preys2):
             if self._prey_alive2[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey2_pos[prey_i])
-                wall_count = 0
+                counter = 0
                 curr_pos = copy.copy(self.prey2_pos[prey_i])
                 prey_neighbours = [[curr_pos[0] + 1, curr_pos[1]], [curr_pos[0] - 1, curr_pos[1]],
                                    [curr_pos[0], curr_pos[1] + 1], [curr_pos[0], curr_pos[1] -1]]
                 for pos in prey_neighbours:
                     if pos[0] < 0 or pos[1] < 0 or pos[0] >= self._grid_shape[0] or pos[1] >= self._grid_shape[1] or\
-                        self._full_obs[pos[0]][pos[1]] == PRE_IDS['wall'] :
-                        wall_count += 1
-                if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):
+                        PRE_IDS['wall'] == self._full_obs[pos[0]][pos[1]] or PRE_IDS['prey'] in self._full_obs[pos[0]][pos[1]] or\
+                        PRE_IDS['prey2'] in self._full_obs[pos[0]][pos[1]]:
+                        counter += 1
+                if predator_neighbour_count >= self._required_captors or (counter > self._required_captors and predator_neighbour_count > 0):
                     _reward = self._prey_capture_reward
                     self._prey_alive2[prey_i] = False
                     self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']

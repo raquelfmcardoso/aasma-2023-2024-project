@@ -35,7 +35,7 @@ class GreedyAgent(Agent):
 
         nearby_preys = prey_positions
         for observation in agent_id_absolute_obs:
-            for pos in agent_id_absolute_obs[observation][1]:
+            for pos in agent_id_absolute_obs[observation][2]:
                 if pos not in nearby_preys:
                     nearby_preys.append(pos)
         
