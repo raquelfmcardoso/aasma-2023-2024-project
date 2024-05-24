@@ -526,8 +526,8 @@ def run_multi_agent(environments, agents, preys, preys2, n_episodes, render_slee
 
         # Calculates the average steps per agent to consume for this episode
         steps_results[episode] = sum(average_steps_per_agent) / environment.n_agents
-        # And the average preys consumed per agent for this episode
-        preys_captured_results[episode] = sum(agent_preys_captured.values()) / environment.n_agents
+        # And the number preys consumed for this episode
+        preys_captured_results[episode] = (environment.n_preys + environment.n_preys2) - (sum(info['prey_alive']) + sum(info['prey_alive']))
         # And the steps for this episode
         results[episode] = steps
         # And the preys alive for this episode
