@@ -8,19 +8,93 @@ from scipy.spatial.distance import cityblock
 N_ACTIONS = 5
 DOWN, LEFT, UP, RIGHT, STAY = range(N_ACTIONS)
 
+def deepcopy(observations):
+    new_obs = []
+    for agent in observations:
+        new_agent = [agent[0]]
+        new_coords = []
+        for coord in agent[1]:
+            new_coords.append(coord)
+        new_agent.append(new_coords)
+        new_obs.append(new_agent)
+    return new_obs
 
 class BdiAgent(Agent):
-    def __init__(self, agent_id):
+    def __init__(self, agent_id, conventions):
         # Initialize agent's beliefs, desires, and intentions
         self.agent_id = agent_id
         self.n_actions = N_ACTIONS
         self.beliefs = {}
         self.desires = {}
         self.intentions = {}
+        self.conventions = conventions
         self.cooperating = False
 
-    def perceive(self):
+    def compute_absolute_observations(self, agent_id):
+        if agent_id not in self.beliefs['absolute_obs']:
+            self.beliefs['absolute_obs'][agent_id] = self.observation[agent_id]
+
+        # For each agent that agent_id can see
+        for seen_agent in self.observation[agent_id][1]:
+            seen_agent_id = seen_agent[0][0]
+            # If that agent's absolute observations have been computed
+            if seen_agent_id in self.beliefs['absolute_obs'] and len(self.beliefs['absolute_obs'][seen_agent_id]) != 0:
+                # Add the ones that we don't have to ours
+                for tmp_agent in self.beliefs['absolute_obs'][seen_agent_id][1]:
+                    if tmp_agent not in self.beliefs['absolute_obs'][agent_id][1]:
+                        self.beliefs['absolute_obs'][agent_id][1].append(tmp_agent)
+                for tmp_prey in self.beliefs['absolute_obs'][seen_agent_id][2]:
+                    if tmp_prey not in self.beliefs['absolute_obs'][agent_id][2]:
+                        self.beliefs['absolute_obs'][agent_id][2].append(tmp_prey)
+                for tmp_wall in self.beliefs['absolute_obs'][seen_agent_id][3]:
+                    if tmp_wall not in self.beliefs['absolute_obs'][agent_id][3]:
+                        self.beliefs['absolute_obs'][agent_id][2].append(tmp_wall)
+            else:
+                self.compute_absolute_observations(seen_agent_id)
+
+    def assign_cooperation(self):
+
+        # Iterate over each agent
+        # For each agent:
+        #   min = inf
+        #   coord_agent = -1
+        #   For each seen agent:
+        #       If the agent already has a coordination -> skip
+        #       Calculate the average position
+        #       For each seen prey:
+        #           Calculate the distance between the prey and the average position
+        #           If it's less than the minimum, assign the distance as the new minimum, the seen agent as coord_agent (and the prey as the target?)
+        #   Establish cooperation between agents in self.cooperations
+
+        for agent_id in self.conventions:
+            agent_absolute_obs = self.beliefs['absolute_obs'][agent_id]
+            agent_coords = agent_absolute_obs[0][1]
+            min_distance = math.inf
+            coordenation_agent = -1
+            for seen_agent in agent_absolute_obs[1]:
+                seen_agent_id = seen_agent[0][0]
+                if (seen_agent_id in self.beliefs['cooperations'] and self.beliefs['cooperations'][seen_agent_id] != -1):
+                    # If the agent already is cooperating with another agent
+                    continue
+                seen_agent_coords = seen_agent[0][1]
+                average_agent_coords = [round((agent_coords[0] + seen_agent_coords[0])/2), round((agent_coords[1] + seen_agent_coords[1])/2)]
+                # Since both agents see each other, they share the same observations
+                seen_preys = agent_absolute_obs[2]
+                for seen_prey in seen_preys:
+                    seen_prey_coords = seen_prey[1]
+                    distance = cityblock(average_agent_coords, seen_prey_coords)
+                    if (distance < min_distance):
+                        min_distance = distance
+                        coordenation_agent = seen_agent_id
+            self.beliefs['cooperations'][agent_id] = coordenation_agent
+            if (coordenation_agent != -1):
+                self.cooperating = True
+                self.beliefs['cooperations'][coordenation_agent] = agent_id
+
+    def perceive(self, environment):
         # Update agent's beliefs based on the current environment
+        self.beliefs['last_seen'] = self.beliefs.get('prey_positions')
+
         agent_position = self.observation[self.agent_id][0][1]
         agent_positions = self.observation[self.agent_id][1]
         prey_positions = self.observation[self.agent_id][2]
@@ -30,27 +104,29 @@ class BdiAgent(Agent):
         self.beliefs['prey_positions'] = prey_positions
         self.beliefs['wall_positions'] = wall_positions
 
-        # We get the complete observations of agents we can see
-        agent_id_absolute_obs = {}
         # We only get the amount of preys an agent we can't see can see
         agent_id_relative_obs = {}
 
-        agent_id_absolute_obs[self.agent_id] = self.observation[self.agent_id] # add our own observations
-        for agent in agent_positions:
-            agent_id_absolute_obs[agent[0]] = self.observation[agent[0]] # {agent_id} : {self.observations[agent_id]}
+        # Compute our own absolute observations
+        self.compute_absolute_observations(self.agent_id)
 
-        for agent_observation in self.observation:
-            if len(agent_observation) != 4:
-                continue
-            if (agent_observation[0][0] not in agent_id_absolute_obs): # if we can't see the agent
-                agent_id_relative_obs[tuple(agent_observation[0][1])] = len(self.observation[agent_observation[0][0]][2]) # {agent_position} : {amount_of_preys}
+        n_agents = len(self.observation)
+        # Compute our relative observations (agents not included in absolute observations aren't seen by us)
+        for agent_id in range(n_agents):
+            if (agent_id not in self.beliefs['absolute_obs']): # if we can't see the agent
+                # {agent_id} : [{amount_of_preys}, [{agent_coordenates}]]
+                agent_id_relative_obs[agent_id] = [len(self.observation[agent_id][2]), self.observation[agent_id][0][1]]
 
-        self.beliefs['absolute_obs'] = agent_id_absolute_obs
         self.beliefs['relative_obs'] = agent_id_relative_obs
         #print(f"\tAgent Position: {self.beliefs['agent_position']}\n")
         #print(f"\tAgents Positions: {self.beliefs['agent_positions']}\n")
         #print(f"\Prey Positions: {self.beliefs['prey_positions']}\n")
         #print(f"\Wall Positions: {self.beliefs['wall_positions']}\n")
+
+        # Finish absolute observations to assign cooperations
+        for agent_id in range(n_agents):
+            self.compute_absolute_observations(agent_id)
+        self.assign_cooperation()
 
     def update_desires(self):
         # Update agent's desires based on its beliefs
@@ -66,61 +142,54 @@ class BdiAgent(Agent):
                         self.desires['desired_location'] = agent[2]
                         #print(f"(Relative) Desired Location >=2: {self.desires['desired_location']}\n")
                         break
-                if 'desired_location' not in self.desires:
+                else:
                     for agent in agents:
                         if agent[0] == 1:
                             self.desires['desired_location'] = agent[2]
                             #print(f"(Relative) Desired Location =1: {self.desires['desired_location']}\n")
                             break
-                # if 'desired_location' not in self.desires then 'closest_prey' is not as well and we'll move randomly
-            # if we can't see a relative agent, we'll move randomly
+                    else:
+                        #Move randomly
+                        pass
+            else: 
+                #Move randomly
+                pass
 
         if not self.cooperating:
-            if len(self.beliefs['prey_positions']) > 0:
-                #find the desired agent to cooperate
-                #print("At least one prey was seen")
-                closest_agent = self.closest_agent(self.beliefs['agent_position'], self.beliefs['agent_positions'])
-                if closest_agent:
-                    #print(f"BBBBBBB: id: {closest_agent[0]} and {self.beliefs['absolute_obs']} and {self.beliefs['agent_positions']}")
-                    self.desires['cooperative_agent'] = self.beliefs['absolute_obs'][closest_agent[0]] # closest agent's observations
-                else:
-                    self.desires['cooperative_agent'] = []
-                #print(f"\Cooperative Agent: {self.desires['cooperative_agent']}\n")
+            # Find the ids of agents that don't have a cooperation bond
+            non_cooperating_agents = [agent_id for agent_id in self.beliefs['cooperations'] if self.beliefs['cooperations'][agent_id] == -1 and agent_id != self.agent_id]
 
-                closest_prey = self.closest_prey(self.beliefs['agent_position'], self.beliefs['prey_positions'])
-                self.desires['closest_prey'] = closest_prey # closest prey's position
-                #print(f"\Closest Prey: {self.desires['closest_prey']}\n")
-            else:
-                #print("No prey was seen")
-                if len(self.beliefs['absolute_obs']) > 1:
-                    #print("At least one close agent")
-                    # order the agents by distance (first agent is the closest) and choose the closest agent with at least 2 preys
-                    agents = []
-                    for agent in self.beliefs['absolute_obs']: # agent is agent_id
-                        #print(f"AAAAAAAAAAAAAAA: id: {agent} and {self.beliefs['absolute_obs'][agent]}")
-                        agents.append((agent, cityblock(self.beliefs['agent_position'], self.beliefs['absolute_obs'][agent][0][1])))
-                    agents.sort(key=lambda x: x[1]) 
-                    for agent in agents:
-                        if len(self.beliefs['absolute_obs'][agent[0]][2]) >= 2:
-                            self.desires['desired_location'] = self.beliefs['absolute_obs'][agent[0]][0][1]
-                            #print(f"\Desired Location >=2: {self.desires['desired_location']}\n")
-                            break
-                    if 'desired_location' not in self.desires:
-                        for agent in agents:
-                            if len(self.beliefs['absolute_obs'][agent[0]][2]) == 1:
-                                self.desires['desired_location'] = self.beliefs['absolute_obs'][agent[0]][0][1]
-                                #print(f"\Desired Location =1: {self.desires['desired_location']}\n")
-                                break
-                    if 'desired_location' not in self.desires:
-                        get_closest_agent_relative()
-                    
-                else:
-                    get_closest_agent_relative()
+            # If all other agents have a cooperation
+            if (len(non_cooperating_agents) == 0):
+                self.random_move()
+
+            # Find the closest
+            distances = []
+            for agent_id in non_cooperating_agents:
+                other_agent_coords = self.observation[agent_id][0][1]
+                distances.append((other_agent_coords, cityblock(self.beliefs['agent_position'], other_agent_coords)))
+
+            distances.sort(key=lambda x: x[1])
+
+            self.desires['desired_location'] = distances[0][0]
         else:
             pass
             # ver oq fazer nos beliefs qd se ta a cooperar
 
-    def deliberation(self):    
+    def random_move(self):
+        moves = {
+                 DOWN: move if (move := self._apply_move([self.beliefs['agent_position'][0], \
+                                                          self.beliefs['agent_position'][1]], DOWN)) not in self.beliefs['wall_positions'] else None,
+                 LEFT: move if (move := self._apply_move([self.beliefs['agent_position'][0], \
+                                                          self.beliefs['agent_position'][1]], LEFT)) not in self.beliefs['wall_positions'] else None,
+                 UP: move if (move := self._apply_move([self.beliefs['agent_position'][0], \
+                                                        self.beliefs['agent_position'][1]], UP)) not in self.beliefs['wall_positions'] else None,
+                 RIGHT: move if (move := self._apply_move([self.beliefs['agent_position'][0], \
+                                                           self.beliefs['agent_position'][1]], RIGHT)) not in self.beliefs['wall_positions'] else None,
+                 STAY: [self.beliefs['agent_position'][0], self.beliefs['agent_position'][1]]
+                }
+
+    def deliberation(self):
         # Select intentions based on agent's desires and beliefs
         if not self.cooperating:
             if 'desired_location' in self.desires:

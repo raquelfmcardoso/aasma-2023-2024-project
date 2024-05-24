@@ -38,6 +38,15 @@ class GreedyAgent(Agent):
         # We only get the amount of preys an agent we can't see can see
         agent_id_relative_obs = {}
 
+        if (self.agent_id == 0):
+            print(f"Agent Observations: {self.observation}")
+        print(f"AGENT {self.agent_id}'S OBSERVATIONS")
+        print(f"Agent Observations: {self.observation[self.agent_id]}")
+        print(f"Agent Position: {agent_position}")
+        print(f"Agents Positions: {agent_positions}")
+        print(f"Prey Positions: {prey_positions}")
+        print(f"Wall Positions: {wall_positions}")
+
         agent_id_absolute_obs[self.agent_id] = self.observation[self.agent_id]
         for agent in agent_positions:
             agent_id_absolute_obs[agent[0]] = self.observation[agent[0]]
@@ -64,6 +73,9 @@ class GreedyAgent(Agent):
         # print("Closest prey:", closest_prey)
         return self.direction_to_go(agent_position, closest_prey, possible_moves) if prey_found else random.choice(possible_moves)
 
+    def run(self) -> int:
+        return self.action()
+
     # ################# #
     # Auxiliary Methods #
     # ################# #
@@ -73,6 +85,8 @@ class GreedyAgent(Agent):
         Given the position of the agent and the position of a prey,
         returns the action to take in order to close the distance
         """
+        if (agent_position == prey_position):
+            return STAY
         distances = np.array(prey_position) - np.array(agent_position)
         # print(f"AGENT: Distance between agent {agent_position} and prey {prey_position}: {distances}")
         abs_distances = np.absolute(distances)

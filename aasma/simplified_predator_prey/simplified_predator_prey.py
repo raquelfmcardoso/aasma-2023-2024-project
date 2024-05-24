@@ -145,7 +145,20 @@ class SimplifiedPredatorPrey(gym.Env):
         self._step_count += 1
         rewards = [self._step_cost for _ in range(self.n_agents)]
 
+        for agent_i, action in enumerate(agents_action):
+            if not (self._agent_dones[agent_i]):
+                self.__update_agent_pos(agent_i, action)
+                self._hp_status[agent_i] -= 0.1
+
         for prey_i, action in enumerate(preys_action):
+            if self._prey_alive[prey_i]:
+                self.__update_prey_pos(prey_i, action)
+
+        for prey_i, action in enumerate(preys2_action):
+            if self._prey_alive2[prey_i]:
+                self.__update_prey2_pos(prey_i, action)
+
+        for prey_i in range(self.n_preys):
             if self._prey_alive[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey_pos[prey_i])
                 wall_count = 0
@@ -159,15 +172,14 @@ class SimplifiedPredatorPrey(gym.Env):
                 if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):
                     _reward = self._prey_capture_reward
                     self._prey_alive[prey_i] = False
+                    self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
                     for i in n_i:
                         self._hp_status[i] += 1.1
 
                     for agent_i in range(self.n_agents):
                         rewards[agent_i] += _reward
-                
-                self.__update_prey_pos(prey_i, action)
 
-        for prey_i, action in enumerate(preys2_action):
+        for prey_i in range(self.n_preys2):
             if self._prey_alive2[prey_i]:
                 predator_neighbour_count, n_i = self._neighbour_agents(self.prey2_pos[prey_i])
                 wall_count = 0
@@ -178,23 +190,16 @@ class SimplifiedPredatorPrey(gym.Env):
                     if pos[0] < 0 or pos[1] < 0 or pos[0] >= self._grid_shape[0] or pos[1] >= self._grid_shape[1] or\
                         self._full_obs[pos[0]][pos[1]] == PRE_IDS['wall'] :
                         wall_count += 1
-                if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):    
+                if predator_neighbour_count >= self._required_captors or (wall_count > self._required_captors and predator_neighbour_count > 0):
                     _reward = self._prey_capture_reward
                     self._prey_alive2[prey_i] = False
-
+                    self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
                     for i in n_i:
                         self._hp_status[i] += 1.1 
 
                     for agent_i in range(self.n_agents):
                         rewards[agent_i] += _reward
-                
-                self.__update_prey2_pos(prey_i, action)
-
-        for agent_i, action in enumerate(agents_action):
-            if not (self._agent_dones[agent_i]):
-                self.__update_agent_pos(agent_i, action)
-                self._hp_status[agent_i] -= 0.1
-        
+              
         for agent_i in range(self.n_agents):
             if self._hp_status[agent_i] <= 0:
                 self._hp_status[agent_i] = 0
@@ -204,13 +209,13 @@ class SimplifiedPredatorPrey(gym.Env):
                 self._full_obs[curr_pos[0]][curr_pos[1]] = PRE_IDS['empty']
             if self._hp_status[agent_i] > 2:
                 self._hp_status[agent_i] = 2
-              
+
         if (self._step_count >= self._max_steps) or (True not in self._prey_alive) or (True not in self._prey_alive2):
             for i in range(self.n_agents):
                 self._agent_dones[i] = True
 
-        for i in range(self.n_agents):
-            self._total_episode_reward[i] += rewards[i]
+        # for i in range(self.n_agents):
+        #     self._total_episode_reward[i] += rewards[i]
 
         #print(f"Health {self._hp_status}")
         #self.get_agent_obs()
@@ -352,9 +357,9 @@ class SimplifiedPredatorPrey(gym.Env):
             elif abs_distances[0] < abs_distances[1]:
                 self.move_horizontally(distances=distances, position=position)
             else:
+                #self.move_horizontally(distances, position) if position[0] % 2 else self.move_vertically(distances, position)
                 roll = random.uniform(0, 1)
                 self.move_horizontally(distances, position) if roll > 0.5 else self.move_vertically(distances, position)
-            
             try:
                 if position == goal_pos:
                     # Mandatory check for when the entity at goal_pos is a wall.
@@ -362,7 +367,7 @@ class SimplifiedPredatorPrey(gym.Env):
                 wall = PRE_IDS['wall'] in self._full_obs[position[0]][position[1]]
             except IndexError:
                 return False
-
+            
         return wall
 
     def get_agent_obs(self):
@@ -380,15 +385,16 @@ class SimplifiedPredatorPrey(gym.Env):
 
             for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
-                    if (PRE_IDS['prey'] in self._full_obs[row][col] or PRE_IDS['prey2'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
+                    if ((PRE_IDS['prey'] in self._full_obs[row][col] or PRE_IDS['prey2'] in self._full_obs[row][col]) and not self.wall_in_path(pos, [row, col])):
                         # Only append if no wall was detected on the shortest path
                         _agent_i_prey_obs.append([row, col])
                     elif (PRE_IDS['wall'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
                         _agent_i_wall_obs.append([row, col])
-                    elif (PRE_IDS['agent'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
-                        # Only append if no wall was detected and if the agent is not ourselves
-                        _agent_i_agent_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
-
+                    elif PRE_IDS['agent'] in self._full_obs[row][col]:
+                        if row != pos[0] or col != pos[1]:
+                            if not self.wall_in_path(pos, [row, col]):
+                                # Only append if no wall was detected and if the agent is not ourselves
+                                _agent_i_agent_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
             # Add grid's borders as walls                    
             if (pos[0] - self._vision_range < 0):
                 for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
@@ -434,9 +440,11 @@ class SimplifiedPredatorPrey(gym.Env):
 
             for row in range(max(0, pos[0] - self._more_vision_range), min(pos[0] + self._more_vision_range + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - self._more_vision_range), min(pos[1] + self._more_vision_range + 1, self._grid_shape[1])):
-                    if (PRE_IDS['prey'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
-                        # Only append if no wall was detected and the prey is not ourselves
-                        _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
+                    if (PRE_IDS['prey'] in self._full_obs[row][col]):
+                        if (row != pos[0] or col != pos[1]):
+                            if (not self.wall_in_path(pos, [row, col])):
+                                # Only append if no wall was detected and the prey is not ourselves
+                                _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
                     elif (PRE_IDS['wall'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
                         _prey_i_wall_obs.append([row, col])
                     elif (PRE_IDS['agent'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
@@ -488,9 +496,11 @@ class SimplifiedPredatorPrey(gym.Env):
 
             for row in range(max(0, pos[0] - self._vision_range), min(pos[0] + self._vision_range + 1, self._grid_shape[0])):
                 for col in range(max(0, pos[1] - self._vision_range), min(pos[1] + self._vision_range + 1, self._grid_shape[1])):
-                    if (PRE_IDS['prey2'] in self._full_obs[row][col] and (row != pos[0] and col != pos[0]) and not self.wall_in_path(pos, [row, col])):
-                        # Only append if no wall was detected and the prey is not ourselves
-                        _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
+                    if (PRE_IDS['prey2'] in self._full_obs[row][col]):
+                        if (row != pos[0] or col != pos[1]):
+                            if (not self.wall_in_path(pos, [row, col])):
+                                # Only append if no wall was detected and the prey is not ourselves
+                                _prey_i_prey_obs.append([int(self._full_obs[row][col][1:]) - 1, [row, col]])
                     elif (PRE_IDS['wall'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
                         _prey_i_wall_obs.append([row, col])
                     elif (PRE_IDS['agent'] in self._full_obs[row][col] and not self.wall_in_path(pos, [row, col])):
